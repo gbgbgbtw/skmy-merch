@@ -1,0 +1,1931 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SKMY Merch Tracker</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+:root {
+  --bg:#0f0f13; --surface:#1a1a22; --surface2:#22222e; --border:#2e2e3e;
+  --accent:#7c6af7; --accent2:#f7a26a; --text:#e8e8f0; --muted:#7070a0;
+  --success:#4caf82; --danger:#f76a6a; --radius:12px; --font:'Inter',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:var(--font);min-height:100vh;}
+
+nav{background:var(--surface);border-bottom:1px solid var(--border);padding:0 16px;display:flex;align-items:center;justify-content:space-between;height:54px;position:sticky;top:0;z-index:100;}
+.nav-logo{font-weight:700;font-size:15px;} .nav-logo span{color:var(--accent);}
+.nav-tabs{display:flex;gap:3px;overflow-x:auto;}
+.nav-tab{padding:6px 11px;border-radius:7px;border:none;background:transparent;color:var(--muted);font-family:var(--font);font-size:12px;font-weight:500;cursor:pointer;transition:all .15s;white-space:nowrap;}
+.nav-tab.active{background:var(--accent);color:#fff;}
+.nav-tab:hover:not(.active){color:var(--text);background:var(--surface2);}
+
+.page{display:none;padding:18px 16px;max-width:640px;margin:0 auto;}
+.page.active{display:block;} .wide{max-width:980px;}
+.page-title{font-size:19px;font-weight:700;margin-bottom:2px;}
+.page-sub{font-size:12px;color:var(--muted);margin-bottom:18px;}
+
+.card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:16px;margin-bottom:12px;}
+.card-title{font-size:11px;font-weight:600;letter-spacing:.08em;color:var(--accent);text-transform:uppercase;margin-bottom:12px;}
+
+label{display:block;font-size:12px;color:var(--muted);margin-bottom:5px;font-weight:500;}
+select,input[type=text],input[type=date],textarea{width:100%;padding:10px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--font);font-size:13px;outline:none;transition:border .15s;-webkit-appearance:none;}
+select:focus,input:focus,textarea:focus{border-color:var(--accent);}
+.field{margin-bottom:12px;}
+
+/* BRAND MULTI SELECT */
+.brand-grid{display:flex;flex-wrap:wrap;gap:6px;}
+.brand-chip{padding:6px 12px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:var(--font);font-size:12px;font-weight:500;cursor:pointer;transition:all .15s;}
+.brand-chip.selected{border-color:var(--accent);background:rgba(124,106,247,.15);color:var(--accent);}
+
+/* TYPE GRID */
+.type-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:7px;}
+.type-card{padding:10px 12px;border-radius:9px;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:var(--font);font-size:12px;font-weight:500;cursor:pointer;transition:all .15s;text-align:left;display:flex;align-items:center;gap:7px;}
+.type-card.selected{border-color:var(--accent2);background:rgba(247,162,106,.1);color:var(--accent2);}
+
+/* UPLOAD */
+.upload-zone{border:2px dashed var(--border);border-radius:10px;padding:26px 16px;text-align:center;cursor:pointer;transition:all .15s;position:relative;overflow:hidden;}
+.upload-zone:hover{border-color:var(--accent);background:rgba(124,106,247,.05);}
+.upload-zone input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;}
+.upload-icon{font-size:28px;margin-bottom:7px;}
+.upload-label{font-size:13px;font-weight:500;}
+.upload-hint{font-size:11px;color:var(--muted);margin-top:3px;}
+
+/* PHOTO TAGGER */
+.photo-tagger{display:flex;flex-direction:column;gap:10px;margin-top:12px;}
+.photo-tag-row{display:flex;gap:10px;align-items:flex-start;background:var(--surface2);border-radius:10px;padding:10px;}
+.photo-tag-thumb{width:64px;height:64px;border-radius:8px;object-fit:cover;flex-shrink:0;cursor:pointer;}
+.photo-tag-info{flex:1;min-width:0;}
+.photo-tag-name{font-size:11px;color:var(--muted);margin-bottom:6px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.photo-tag-brands{display:flex;flex-wrap:wrap;gap:5px;}
+.photo-brand-chip{padding:4px 10px;border-radius:20px;border:1px solid var(--border);background:transparent;color:var(--muted);font-family:var(--font);font-size:11px;cursor:pointer;transition:all .15s;}
+.photo-brand-chip.selected{border-color:var(--accent);background:rgba(124,106,247,.15);color:var(--accent);}
+.photo-remove{background:transparent;border:none;color:var(--danger);cursor:pointer;font-size:16px;flex-shrink:0;padding:2px;}
+
+/* UPLOAD PROGRESS */
+.upload-progress{background:var(--surface2);border-radius:8px;padding:12px;margin-top:10px;}
+.progress-bar-outer{background:var(--border);border-radius:4px;height:6px;margin-top:6px;overflow:hidden;}
+.progress-bar-inner{height:100%;background:var(--accent);border-radius:4px;transition:width .3s;}
+.progress-text{font-size:12px;color:var(--muted);}
+
+/* BTN */
+.btn{padding:10px 16px;border-radius:9px;border:none;font-family:var(--font);font-size:13px;font-weight:600;cursor:pointer;transition:all .15s;display:inline-flex;align-items:center;gap:6px;}
+.btn-primary{background:var(--accent);color:#fff;width:100%;justify-content:center;font-size:14px;}
+.btn-primary:hover{background:#6a58e0;}
+.btn-primary:disabled{opacity:.5;cursor:not-allowed;}
+.btn-outline{background:transparent;color:var(--text);border:1px solid var(--border);}
+.btn-outline:hover{border-color:var(--accent);color:var(--accent);}
+.btn-sm{padding:6px 10px;font-size:11px;border-radius:7px;}
+.btn-danger{background:transparent;color:var(--danger);border:1px solid var(--danger);}
+.btn-success{background:var(--success);color:#fff;}
+.btn-ghost{background:transparent;border:none;color:var(--muted);padding:4px 8px;}
+
+/* FILTER */
+.filter-bar{display:flex;gap:7px;flex-wrap:wrap;margin-bottom:16px;align-items:center;}
+.filter-bar select,.filter-bar input{width:auto;flex:1;min-width:110px;font-size:12px;padding:8px 10px;}
+.filter-active{border-color:var(--accent)!important;}
+
+/* STATS */
+.stats-row{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:16px;}
+.stat-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:12px;text-align:center;}
+.stat-num{font-size:22px;font-weight:700;color:var(--accent);}
+.stat-label{font-size:10px;color:var(--muted);margin-top:1px;}
+
+/* RECORDS */
+.records{display:flex;flex-direction:column;gap:8px;}
+.record-card{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:12px;}
+.record-card.posm{border-left:3px solid var(--accent2);}
+.record-card.project{border-left:3px solid var(--success);}
+.record-top{display:flex;align-items:center;gap:7px;flex-wrap:wrap;margin-bottom:4px;}
+.record-outlet{font-size:14px;font-weight:600;}
+.badge{padding:2px 8px;border-radius:20px;font-size:11px;font-weight:600;}
+.badge-purple{background:rgba(124,106,247,.15);color:var(--accent);}
+.badge-orange{background:rgba(247,162,106,.15);color:var(--accent2);}
+.badge-green{background:rgba(76,175,130,.15);color:var(--success);}
+.badge-red{background:rgba(247,106,106,.15);color:var(--danger);}
+.record-sub{font-size:12px;color:var(--muted);margin-bottom:4px;}
+.record-meta{font-size:11px;color:var(--muted);display:flex;gap:10px;flex-wrap:wrap;}
+.record-notes{font-size:12px;color:var(--text);margin-top:6px;background:var(--surface2);padding:6px 10px;border-radius:7px;}
+.record-actions{display:flex;gap:6px;margin-top:10px;flex-wrap:wrap;}
+
+/* PHOTO GRID IN RECORD */
+.record-photo-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:5px;margin-top:8px;}
+.record-photo-item{position:relative;aspect-ratio:1;border-radius:7px;overflow:hidden;cursor:pointer;}
+.record-photo-item img{width:100%;height:100%;object-fit:cover;}
+.photo-brand-badges{position:absolute;bottom:3px;left:3px;right:3px;display:flex;flex-wrap:wrap;gap:2px;}
+.photo-mini-badge{background:rgba(0,0,0,.75);color:#fff;font-size:9px;padding:1px 5px;border-radius:10px;backdrop-filter:blur(4px);}
+.more-overlay{position:absolute;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;font-weight:700;}
+
+/* SETTINGS */
+.settings-list{display:flex;flex-direction:column;gap:7px;}
+.settings-item{background:var(--surface2);border:1px solid var(--border);border-radius:9px;padding:10px 13px;display:flex;align-items:center;justify-content:space-between;gap:10px;}
+.settings-item-name{font-size:13px;font-weight:500;}
+.settings-item-sub{font-size:11px;color:var(--muted);margin-top:1px;}
+.add-row{display:flex;gap:7px;margin-bottom:10px;}
+.add-row input{flex:1;}
+
+/* REPORT */
+.brand-report{display:flex;flex-direction:column;gap:8px;}
+.brand-row{background:var(--surface);border:1px solid var(--border);border-radius:var(--radius);padding:14px 16px;}
+.brand-row-top{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:7px;}
+.brand-name{font-size:14px;font-weight:600;}
+.brand-stats{display:flex;gap:14px;}
+.brand-stat-num{font-size:17px;font-weight:700;color:var(--accent);}
+.brand-stat-lbl{font-size:10px;color:var(--muted);}
+.prog-bar{height:3px;background:var(--border);border-radius:2px;margin-bottom:5px;overflow:hidden;}
+.prog-fill{height:100%;background:var(--accent);border-radius:2px;}
+.brand-outlets{font-size:11px;color:var(--muted);}
+
+/* SHARE MODAL */
+.modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.75);z-index:200;display:flex;align-items:flex-end;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s;}
+.modal-overlay.show{opacity:1;pointer-events:all;}
+.modal{background:var(--surface);border-radius:16px 16px 0 0;padding:22px 18px;width:100%;max-width:560px;max-height:85vh;overflow-y:auto;}
+.modal-title{font-size:16px;font-weight:700;margin-bottom:14px;}
+
+/* SHARE VIEW (public) */
+.share-header{background:var(--surface);border-bottom:1px solid var(--border);padding:14px 16px;display:flex;align-items:center;gap:10px;}
+.share-filters{display:flex;gap:8px;flex-wrap:wrap;padding:14px 16px;}
+.share-filters select{width:auto;flex:1;min-width:120px;font-size:12px;padding:8px 10px;}
+.share-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:10px;padding:0 16px 16px;}
+.share-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;}
+.share-card-img{width:100%;aspect-ratio:4/3;object-fit:cover;cursor:pointer;}
+.share-card-info{padding:8px 10px;}
+.share-card-outlet{font-size:12px;font-weight:600;}
+.share-card-meta{font-size:10px;color:var(--muted);margin-top:2px;}
+.share-card-brands{display:flex;flex-wrap:wrap;gap:3px;margin-top:5px;}
+
+/* LIGHTBOX */
+.lightbox{position:fixed;inset:0;background:rgba(0,0,0,.93);z-index:1000;display:flex;align-items:center;justify-content:center;opacity:0;pointer-events:none;transition:opacity .2s;}
+.lightbox.show{opacity:1;pointer-events:all;}
+.lightbox img{max-width:92vw;max-height:86vh;border-radius:10px;object-fit:contain;}
+.lightbox-close{position:absolute;top:14px;right:14px;background:rgba(255,255,255,.12);border:none;color:white;font-size:17px;width:36px;height:36px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.lightbox-caption{position:absolute;bottom:20px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.7);color:#fff;padding:6px 14px;border-radius:20px;font-size:12px;white-space:nowrap;}
+
+/* TOAST */
+.toast{position:fixed;bottom:22px;left:50%;transform:translateX(-50%);background:var(--success);color:#fff;padding:10px 20px;border-radius:10px;font-size:13px;font-weight:500;opacity:0;pointer-events:none;transition:opacity .3s;z-index:999;white-space:nowrap;}
+.toast.show{opacity:1;} .toast.error{background:var(--danger);}
+
+.empty{text-align:center;padding:44px 16px;color:var(--muted);}
+.empty-icon{font-size:38px;margin-bottom:8px;} .empty p{font-size:13px;}
+
+.divider{font-size:11px;font-weight:600;letter-spacing:.07em;color:var(--muted);text-transform:uppercase;margin:14px 0 8px;}
+
+@media(max-width:500px){
+  .stats-row{grid-template-columns:repeat(2,1fr);}
+  .share-grid{grid-template-columns:1fr;}
+  .record-photo-grid{grid-template-columns:repeat(3,1fr);}
+}
+</style>
+</head>
+<body>
+
+<nav id="main-nav">
+  <div class="nav-logo">SK<span>MY</span></div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="showPage('upload',this)">📸 Upload</button>
+    <button class="nav-tab" onclick="showPage('records',this)">📂 Records</button>
+    <button class="nav-tab" onclick="showPage('projects',this)">📌 Projects</button>
+    <button class="nav-tab" onclick="showPage('report',this)">📊 Report</button>
+    <button class="nav-tab" onclick="showPage('settings',this)">⚙️ Settings</button>
+  </div>
+</nav>
+
+<!-- ===== UPLOAD ===== -->
+<div class="page active" id="page-upload">
+  <div class="page-title">Upload Visit</div>
+  <div class="page-sub">Fill in details and tag photos by brand</div>
+
+  <div class="card">
+    <div class="card-title">Outlet Info</div>
+    <div class="field"><label>Outlet *</label><select id="outlet"></select></div>
+    <div class="field"><label>Visit Date *</label><input type="date" id="visit-date"></div>
+    <div class="field"><label>Merchandizer</label><select id="merch-name"><option value="">Select...</option></select></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Visit Type *</div>
+    <div class="type-grid" id="type-grid">
+      <button class="type-card" onclick="selectType('Routine Visit',this)">🔄 Routine Visit</button>
+      <button class="type-card" onclick="selectType('POSM Installation',this)">📌 POSM Installation</button>
+      <button class="type-card" onclick="selectType('Shelf Arrangement',this)">📦 Shelf Arrangement</button>
+      <button class="type-card" onclick="selectType('New Display',this)">✨ New Display</button>
+      <button class="type-card" onclick="selectType('Promotion',this)">🎯 Promotion</button>
+      <button class="type-card" onclick="selectType('Project',this)">🗂️ Project</button>
+    </div>
+    <div class="field" id="project-field" style="display:none;margin-top:10px">
+      <label>Link to Project</label>
+      <select id="project-select"><option value="">No project</option></select>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Photos & Brand Tagging *</div>
+    <div class="upload-zone">
+      <input type="file" id="photo-input" accept="image/*" multiple onchange="handleFiles(this.files)">
+      <div class="upload-icon">📷</div>
+      <div class="upload-label">Tap to take / upload photos</div>
+      <div class="upload-hint">Multiple photos · tag each photo with its brand(s)</div>
+    </div>
+    <div class="photo-tagger" id="photo-tagger"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Remarks (optional)</div>
+    <textarea id="notes" rows="2" style="resize:none" placeholder="e.g. Out of stock, POSM installed..."></textarea>
+  </div>
+
+  <div id="upload-progress" style="display:none" class="card">
+    <div class="progress-text" id="progress-text">Uploading...</div>
+    <div class="progress-bar-outer"><div class="progress-bar-inner" id="progress-bar" style="width:0%"></div></div>
+  </div>
+
+  <button class="btn btn-primary" id="submit-btn" onclick="submitRecord()">✅ Submit Record</button>
+</div>
+
+<!-- ===== RECORDS ===== -->
+<div class="page wide" id="page-records">
+  <div class="page-title">Records</div>
+  <div class="page-sub">Filter and browse all visit records</div>
+  <div class="stats-row" id="stats-row"></div>
+  <div class="filter-bar">
+    <select id="f-brand" onchange="renderRecords()"><option value="">All Brands</option></select>
+    <select id="f-outlet" onchange="renderRecords()"><option value="">All Outlets</option></select>
+    <select id="f-type" onchange="renderRecords()">
+      <option value="">All Types</option>
+      <option>Routine Visit</option><option>POSM Installation</option>
+      <option>Shelf Arrangement</option><option>New Display</option>
+      <option>Promotion</option><option>Project</option>
+    </select>
+    <input type="date" id="f-date-from" onchange="renderRecords()" placeholder="From" style="min-width:120px">
+    <input type="date" id="f-date-to" onchange="renderRecords()" placeholder="To" style="min-width:120px">
+    <input type="text" id="f-search" placeholder="🔍 Search..." oninput="renderRecords()" style="min-width:110px">
+    <button class="btn btn-sm btn-outline" onclick="clearFilters()">Clear</button>
+    <button class="btn btn-sm btn-success" onclick="openShareModal()">🔗 Share</button>
+  </div>
+  <div class="records" id="records-list"></div>
+</div>
+
+<!-- ===== PROJECTS ===== -->
+<div class="page wide" id="page-projects">
+  <div class="page-title">Projects / POSM Campaigns</div>
+  <div class="page-sub">Manage ongoing campaigns</div>
+  <div style="margin-bottom:14px"><button class="btn btn-primary" style="width:auto" onclick="openProjectModal()">+ New Project</button></div>
+  <div id="projects-list"></div>
+</div>
+
+<!-- ===== REPORT ===== -->
+<div class="page wide" id="page-report">
+  <div class="page-title">Brand Report</div>
+  <div class="page-sub">Summary by brand — share with brand partners</div>
+  <div class="filter-bar">
+    <select id="report-period" onchange="renderReport()">
+      <option value="7">Last 7 days</option>
+      <option value="30" selected>Last 30 days</option>
+      <option value="90">Last 90 days</option>
+      <option value="all">All time</option>
+    </select>
+    <select id="report-brand" onchange="renderReport()"><option value="">All Brands</option></select>
+    <button class="btn btn-sm btn-outline" onclick="exportCSV()">📥 Export CSV</button>
+    <button class="btn btn-sm btn-success" onclick="openShareModal()">🔗 Share Link</button>
+  </div>
+  <div id="report-content"></div>
+</div>
+
+<!-- ===== SETTINGS ===== -->
+<div class="page" id="page-settings">
+  <div class="page-title">Settings</div>
+  <div class="page-sub">Manage outlets, brands & team</div>
+
+  <div class="card">
+    <div class="card-title">Outlets</div>
+    <div class="add-row">
+      <input type="text" id="new-outlet-chain" placeholder="Chain" style="flex:0.5">
+      <input type="text" id="new-outlet-name" placeholder="Outlet name">
+      <button class="btn btn-success btn-sm" onclick="addOutlet()">Add</button>
+    </div>
+    <div class="settings-list" id="outlets-list"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Brands</div>
+    <div class="add-row">
+      <input type="text" id="new-brand" placeholder="Brand name">
+      <button class="btn btn-success btn-sm" onclick="addBrand()">Add</button>
+    </div>
+    <div class="settings-list" id="brands-list"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Team / Merchandizers</div>
+    <div class="add-row">
+      <input type="text" id="new-merch" placeholder="Name">
+      <button class="btn btn-success btn-sm" onclick="addMerch()">Add</button>
+    </div>
+    <div class="settings-list" id="merch-list"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Cloudinary Config</div>
+    <div class="field"><label>Cloud Name</label><input type="text" id="cfg-cloud" placeholder="ds3rgc8zt"></div>
+    <div class="field"><label>Upload Preset</label><input type="text" id="cfg-preset" placeholder="skmy_merch"></div>
+    <button class="btn btn-success btn-sm" onclick="saveConfig()">Save Config</button>
+    <div style="margin-top:14px;border-top:1px solid var(--border);padding-top:14px">
+      <button class="btn btn-danger btn-sm" onclick="clearAllData()">🗑 Clear All Records</button>
+    </div>
+  </div>
+</div>
+
+<!-- PROJECT MODAL -->
+<div class="modal-overlay" id="project-modal">
+  <div class="modal">
+    <div class="modal-title" id="proj-modal-title">New Project</div>
+    <div class="field"><label>Project Name *</label><input type="text" id="proj-name"></div>
+    <div class="field"><label>Brand</label><select id="proj-brand"><option value="">All / General</option></select></div>
+    <div class="field"><label>Type</label>
+      <select id="proj-type"><option>POSM Campaign</option><option>New Launch</option><option>Seasonal Promo</option><option>Shelf Reset</option><option>Other</option></select>
+    </div>
+    <div class="field"><label>Start Date</label><input type="date" id="proj-start"></div>
+    <div class="field"><label>End Date</label><input type="date" id="proj-end"></div>
+    <div class="field"><label>Description</label><textarea id="proj-desc" rows="2" style="resize:none"></textarea></div>
+    <div style="display:flex;gap:7px;margin-top:4px">
+      <button class="btn btn-primary" onclick="saveProject()" style="flex:1">Save</button>
+      <button class="btn btn-outline" onclick="closeModal('project-modal')">Cancel</button>
+    </div>
+  </div>
+</div>
+
+<!-- SHARE MODAL -->
+<div class="modal-overlay" id="share-modal">
+  <div class="modal">
+    <div class="modal-title">🔗 Share Photos</div>
+    <p style="font-size:13px;color:var(--muted);margin-bottom:14px">Generate a link for brand partners to view filtered photos. They can also download from the link.</p>
+    <div class="field"><label>Brand</label>
+      <select id="share-brand"><option value="">All Brands</option></select>
+    </div>
+    <div class="field"><label>Outlet</label>
+      <select id="share-outlet"><option value="">All Outlets</option></select>
+    </div>
+    <div style="display:flex;gap:7px">
+      <div class="field" style="flex:1"><label>From</label><input type="date" id="share-from"></div>
+      <div class="field" style="flex:1"><label>To</label><input type="date" id="share-to"></div>
+    </div>
+    <button class="btn btn-primary" onclick="generateShareLink()" style="margin-bottom:10px">Generate Link</button>
+    <div id="share-link-box" style="display:none">
+      <div style="background:var(--surface2);border:1px solid var(--border);border-radius:8px;padding:10px;font-size:12px;word-break:break-all;color:var(--text);margin-bottom:8px" id="share-link-text"></div>
+      <div style="display:flex;gap:7px">
+        <button class="btn btn-success btn-sm" onclick="copyShareLink()">📋 Copy Link</button>
+        <button class="btn btn-outline btn-sm" onclick="openShareView()">👁 Preview</button>
+      </div>
+    </div>
+    <button class="btn btn-outline btn-sm" style="margin-top:10px;width:100%" onclick="closeModal('share-modal')">Close</button>
+  </div>
+</div>
+
+<!-- SHARE VIEW PAGE (shown when ?share= in URL) -->
+<div id="share-view" style="display:none;min-height:100vh">
+  <div class="share-header">
+    <div>
+      <div style="font-weight:700;font-size:15px">SK<span style="color:var(--accent)">MY</span> Merch Photos</div>
+      <div id="share-view-sub" style="font-size:12px;color:var(--muted)"></div>
+    </div>
+    <button class="btn btn-sm btn-outline" style="margin-left:auto" onclick="downloadAllVisible()">📥 Download All</button>
+  </div>
+  <div class="share-filters">
+    <select id="sv-brand" onchange="renderShareView()"><option value="">All Brands</option></select>
+    <select id="sv-outlet" onchange="renderShareView()"><option value="">All Outlets</option></select>
+  </div>
+  <div class="share-grid" id="share-grid"></div>
+</div>
+
+<!-- LIGHTBOX -->
+<div class="lightbox" id="lightbox" onclick="closeLightboxClick(event)">
+  <button class="lightbox-close" onclick="closeLightbox()">✕</button>
+  <img id="lightbox-img" src="" alt="">
+  <div class="lightbox-caption" id="lightbox-caption"></div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+// ============ CONFIG ============
+const CLOUDINARY_CLOUD = 'ds3rgc8zt';
+const CLOUDINARY_PRESET = 'skmy_merch';
+const SUPABASE_URL = 'https://gkoesvguahwkztzlxwhf.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imdrb2Vzdmd1YWh3a3p0emx4d2hmIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODE0MjU5OTMsImV4cCI6MjA5NzAwMTk5M30.nalR4SVNM0hF43S5K-94jW_nfX9VZS5eUeIrwkNWwVs';
+
+// Supabase helpers
+async function sbGet(table, filters={}) {
+  let url = `${SUPABASE_URL}/rest/v1/${table}?order=created_at.desc`;
+  for (const [k,v] of Object.entries(filters)) {
+    if (Array.isArray(v)) url += `&${k}=cs.{${v.map(x=>`"${x}"`).join(',')}}`;
+    else url += `&${k}=eq.${encodeURIComponent(v)}`;
+  }
+  const res = await fetch(url, {headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}});
+  return res.json();
+}
+async function sbInsert(table, data) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+    method:'POST', headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json','Prefer':'return=representation'},
+    body: JSON.stringify(data)
+  });
+  return res.json();
+}
+async function sbUpdate(table, id, data) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${id}`, {
+    method:'PATCH', headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json','Prefer':'return=representation'},
+    body: JSON.stringify(data)
+  });
+  return res.json();
+}
+async function sbDelete(table, id) {
+  await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${id}`, {
+    method:'DELETE', headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}
+  });
+}
+async function sbSearch(table, filters={}, dateFrom='', dateTo='', brandFilter='') {
+  let url = `${SUPABASE_URL}/rest/v1/${table}?order=created_at.desc&limit=500`;
+  if (filters.outlet) url += `&outlet=eq.${encodeURIComponent(filters.outlet)}`;
+  if (filters.type) url += `&type=eq.${encodeURIComponent(filters.type)}`;
+  if (dateFrom) url += `&date=gte.${dateFrom}`;
+  if (dateTo) url += `&date=lte.${dateTo}`;
+  if (brandFilter) url += `&brands=cs.{"${brandFilter}"}`;
+  const res = await fetch(url, {headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}});
+  return res.json();
+}
+
+// ============ DEFAULT DATA ============
+const DEFAULT_OUTLETS = [
+  {chain:'Watson',name:'Watson CHERAS LEISURE MALL'},
+  {chain:'Watson',name:'Watson MAHKOTA PARADE'},
+  {chain:'Watson',name:'Watson KOMPLEKS M.P.K.S.'},
+  {chain:'Watson',name:'Watson SELAYANG MALL'},
+  {chain:'Watson',name:'Watson IOI MALL'},
+  {chain:'Watson',name:'Watson AEON ALPHA ANGLE'},
+  {chain:'Watson',name:'Watson AMPANG POINT SHOPPING'},
+  {chain:'Watson',name:'Watson PLAZA METRO KAJANG'},
+  {chain:'Watson',name:'Watson AEON KINTA CITY'},
+  {chain:'Watson',name:'Watson SUNWAY PYRAMID'},
+  {chain:'Watson',name:'Watson KUANTAN PARADE'},
+  {chain:'Watson',name:'Watson PLAZA ANGSANA'},
+  {chain:'Watson',name:'Watson AMCORP MALL'},
+  {chain:'Watson',name:'Watson MEGAMALL PINANG SHOP'},
+  {chain:'Watson',name:'Watson KOMTAR'},
+  {chain:'Watson',name:'Watson BERJAYA MEGAMALL'},
+  {chain:'Watson',name:'Watson SUMMIT SUBANG USJ'},
+  {chain:'Watson',name:'Watson CITY SQUARE'},
+  {chain:'Watson',name:'Watson IPOH PARADE'},
+  {chain:'Watson',name:'Watson SS2'},
+  {chain:'Watson',name:'Watson JALAN CHENG LOCK'},
+  {chain:'Watson',name:'Watson PRANGIN MALL'},
+  {chain:'Watson',name:'Watson GURNEY PLAZA'},
+  {chain:'Watson',name:'Watson IOI MALL KULAI'},
+  {chain:'Watson',name:'Watson KOMPLEKS KARAMUNSING'},
+  {chain:'Watson',name:'Watson SARAWAK PLAZA'},
+  {chain:'Watson',name:'Watson AEON TMN UNIVERSITY'},
+  {chain:'Watson',name:'Watson SRI GOMBAK'},
+  {chain:'Watson',name:'Watson KOTA BHARU'},
+  {chain:'Watson',name:'Watson JALAN SULTAN ISMAIL'},
+  {chain:'Watson',name:'Watson CENTRAL SQUARE SUNGAI PETANI'},
+  {chain:'Watson',name:'Watson WISMA MERDEKA'},
+  {chain:'Watson',name:'Watson SS 15'},
+  {chain:'Watson',name:'Watson PJ OLD TOWN'},
+  {chain:'Watson',name:'Watson AEON KEPONG'},
+  {chain:'Watson',name:'Watson JALAN GENTING KLANG'},
+  {chain:'Watson',name:'Watson PUSAT BANDAR RAWANG'},
+  {chain:'Watson',name:'Watson MID POINT SHOPPING CENTRE'},
+  {chain:'Watson',name:'Watson KOMPLEKS MUTIARA'},
+  {chain:'Watson',name:'Watson DESA SETAPAK'},
+  {chain:'Watson',name:'Watson PRIMA TANJUNG PENANG'},
+  {chain:'Watson',name:'Watson SHAH ALAM SEC. 18'},
+  {chain:'Watson',name:'Watson WISMA TAI & TAI'},
+  {chain:'Watson',name:'Watson PLAZA SHAH ALAM'},
+  {chain:'Watson',name:'Watson GREAT EASTERN MALL'},
+  {chain:'Watson',name:'Watson KB MALL'},
+  {chain:'Watson',name:'Watson SB MALL'},
+  {chain:'Watson',name:'Watson LOTUS\'S PENANG E GATE'},
+  {chain:'Watson',name:'Watson PJ NEW TOWN'},
+  {chain:'Watson',name:'Watson DESA PANDAN'},
+  {chain:'Watson',name:'Watson HIGH STREET MIRI'},
+  {chain:'Watson',name:'Watson THE CURVE'},
+  {chain:'Watson',name:'Watson TAMAN MOLEK'},
+  {chain:'Watson',name:'Watson PORT DICKSON'},
+  {chain:'Watson',name:'Watson LOTUS\'S IPOH GARDEN'},
+  {chain:'Watson',name:'Watson HARTAMAS SHOPPING CENTRE'},
+  {chain:'Watson',name:'Watson DANAU DESA'},
+  {chain:'Watson',name:'Watson BUKIT TINGGI KLANG'},
+  {chain:'Watson',name:'Watson KUCHAI ENTREPRENUER'},
+  {chain:'Watson',name:'Watson WAWASAN AMPANG'},
+  {chain:'Watson',name:'Watson TAMAN PERTAMA CHERAS'},
+  {chain:'Watson',name:'Watson BANTING'},
+  {chain:'Watson',name:'Watson KOMPLEKS BANDAR'},
+  {chain:'Watson',name:'Watson TAIPAN SENAWANG'},
+  {chain:'Watson',name:'Watson FAJAR COMPLEX, TAWAU'},
+  {chain:'Watson',name:'Watson ENDAH PARADE'},
+  {chain:'Watson',name:'Watson ULU TIRAM'},
+  {chain:'Watson',name:'Watson JALAN AL-BAKRI'},
+  {chain:'Watson',name:'Watson TAMPIN'},
+  {chain:'Watson',name:'Watson STAR PARADE'},
+  {chain:'Watson',name:'Watson FIRST WORLD HOTEL'},
+  {chain:'Watson',name:'Watson MENTAKAB'},
+  {chain:'Watson',name:'Watson KOTA TINGGI'},
+  {chain:'Watson',name:'Watson TELUK INTAN'},
+  {chain:'Watson',name:'Watson SACC MALL'},
+  {chain:'Watson',name:'Watson BANDAR SRI DAMANSARA'},
+  {chain:'Watson',name:'Watson AEON PERMAS JAYA'},
+  {chain:'Watson',name:'Watson PARIT BUNTAR'},
+  {chain:'Watson',name:'Watson MELAKA RAYA'},
+  {chain:'Watson',name:'Watson AEON SEREMBAN 2'},
+  {chain:'Watson',name:'Watson SEMENYIH'},
+  {chain:'Watson',name:'Watson SANDAKAN'},
+  {chain:'Watson',name:'Watson PLAZA SENTOSA'},
+  {chain:'Watson',name:'Watson DESA CEMPAKA'},
+  {chain:'Watson',name:'Watson DAMAI POINT'},
+  {chain:'Watson',name:'Watson TAMAN NUSA BESTARI'},
+  {chain:'Watson',name:'Watson SARAWAK HOUSE'},
+  {chain:'Watson',name:'Watson DESA AMAN PURI'},
+  {chain:'Watson',name:'Watson KUALA SELANGOR'},
+  {chain:'Watson',name:'Watson DATARAN SUNWAY'},
+  {chain:'Watson',name:'Watson BANDAR SUNGAI LONG'},
+  {chain:'Watson',name:'Watson IDEAL AVENUE PENANG'},
+  {chain:'Watson',name:'Watson DUNGUN TERENGGANU'},
+  {chain:'Watson',name:'Watson CHUKAI'},
+  {chain:'Watson',name:'Watson MEDAN CONNAUGHT'},
+  {chain:'Watson',name:'Watson AMAN SURIA'},
+  {chain:'Watson',name:'Watson KLUANG'},
+  {chain:'Watson',name:'Watson MEDAN PUTRA'},
+  {chain:'Watson',name:'Watson PEKAN SIMPANG KUALA'},
+  {chain:'Watson',name:'Watson PERSIARAN SULTAN ABD'},
+  {chain:'Watson',name:'Watson TAIPING'},
+  {chain:'Watson',name:'Watson AEON TAMAN EQUINE'},
+  {chain:'Watson',name:'Watson TAMAN SENTOSA KLANG'},
+  {chain:'Watson',name:'Watson BENTONG'},
+  {chain:'Watson',name:'Watson PEKAN'},
+  {chain:'Watson',name:'Watson JALAN BESERAH'},
+  {chain:'Watson',name:'Watson LOTUS\'S AMPANG'},
+  {chain:'Watson',name:'Watson BAHAU'},
+  {chain:'Watson',name:'Watson TAMAN SRI MUDA'},
+  {chain:'Watson',name:'Watson PASIR TUMBUH'},
+  {chain:'Watson',name:'Watson KAPAR'},
+  {chain:'Watson',name:'Watson JERTEH'},
+  {chain:'Watson',name:'Watson JALAN TUN ISMAIL'},
+  {chain:'Watson',name:'Watson PEKAN JITRA 2'},
+  {chain:'Watson',name:'Watson HARBOUR SQUARE'},
+  {chain:'Watson',name:'Watson AEON BIG KEPONG'},
+  {chain:'Watson',name:'Watson AEON BIG BATU PAHAT'},
+  {chain:'Watson',name:'Watson TAMAN PERMATA'},
+  {chain:'Watson',name:'Watson QUEENSBAY MALL'},
+  {chain:'Watson',name:'Watson AEON CHERAS SELATAN'},
+  {chain:'Watson',name:'Watson LOTUS\'S SERI ALAM'},
+  {chain:'Watson',name:'Watson PARKCITY MALL BINTULU'},
+  {chain:'Watson',name:'Watson SUNWAY CARNIVAL'},
+  {chain:'Watson',name:'Watson LOTUS\'S IPOH BERCHAM'},
+  {chain:'Watson',name:'Watson LOTUS\'S CHERAS'},
+  {chain:'Watson',name:'Watson PAVILION KL SHOPPING'},
+  {chain:'Watson',name:'Watson AEON BUKIT TINGGI SHOPPING'},
+  {chain:'Watson',name:'Watson DELTA MALL'},
+  {chain:'Watson',name:'Watson LOTUS\'S KOTA BHARU'},
+  {chain:'Watson',name:'Watson ONE BORNEO KOTA KINABALU'},
+  {chain:'Watson',name:'Watson AEON AU2 SHOPPING CENTRE'},
+  {chain:'Watson',name:'Watson AEON BUKIT INDAH SHOPPING'},
+  {chain:'Watson',name:'Watson WETEX PARADE SHOPPING'},
+  {chain:'Watson',name:'Watson LOTUS\'S SG PETANI'},
+  {chain:'Watson',name:'Watson AEON BANDARAYA MELAKA'},
+  {chain:'Watson',name:'Watson KLUANG MALL JOHOR'},
+  {chain:'Watson',name:'Watson LOTUS\'S RAWANG'},
+  {chain:'Watson',name:'Watson AEON BIG BUKIT RIMAU'},
+  {chain:'Watson',name:'Watson BINTANG MIRI SARAWAK'},
+  {chain:'Watson',name:'Watson LOTUS\'S BUKIT INDAH'},
+  {chain:'Watson',name:'Watson CENTRE POINT KK'},
+  {chain:'Watson',name:'Watson KOMPLEKS ARAU'},
+  {chain:'Watson',name:'Watson MEDAN NIAGA KUALA SELANGOR'},
+  {chain:'Watson',name:'Watson LOTUS\'S KEPONG'},
+  {chain:'Watson',name:'Watson BATU PAHAT MALL'},
+  {chain:'Watson',name:'Watson KUBANG KERIAN'},
+  {chain:'Watson',name:'Watson PLAZA ALAM SENTRAL'},
+  {chain:'Watson',name:'Watson SING KWONG MALL'},
+  {chain:'Watson',name:'Watson TIMES SQUARE'},
+  {chain:'Watson',name:'Watson KSL CITY MALL'},
+  {chain:'Watson',name:'Watson 1ST AVENUE'},
+  {chain:'Watson',name:'Watson AEON BIG PUC UTAMA'},
+  {chain:'Watson',name:'Watson ALOR STAR MALL'},
+  {chain:'Watson',name:'Watson ONE UTAMA SHOPPING CENTRE'},
+  {chain:'Watson',name:'Watson AEON MELAKA'},
+  {chain:'Watson',name:'Watson BOULEVARD MALL MIRI'},
+  {chain:'Watson',name:'Watson TANJUNG MALIM'},
+  {chain:'Watson',name:'Watson BOULEVARD MALL KUCHING'},
+  {chain:'Watson',name:'Watson KENINGAU MALL'},
+  {chain:'Watson',name:'Watson PRECINCT 88 JLN SONG'},
+  {chain:'Watson',name:'Watson KULIM CENTRAL'},
+  {chain:'Watson',name:'Watson INANAM TAIPAN KK'},
+  {chain:'Watson',name:'Watson MERSING'},
+  {chain:'Watson',name:'Watson SETAPAK CENTRAL'},
+  {chain:'Watson',name:'Watson BATU KAWAH'},
+  {chain:'Watson',name:'Watson JALAN MANGGIS KLUANG'},
+  {chain:'Watson',name:'Watson BANDAR PRIMA SANDAKAN'},
+  {chain:'Watson',name:'Watson SURIA SABAH'},
+  {chain:'Watson',name:'Watson STAR MEGAMALL SIBU'},
+  {chain:'Watson',name:'Watson BMC MALL'},
+  {chain:'Watson',name:'Watson LOTUS\'S BUKIT MERTAJAM'},
+  {chain:'Watson',name:'Watson PERMY MALL'},
+  {chain:'Watson',name:'Watson VANTAGE POINT'},
+  {chain:'Watson',name:'Watson BERJAYA TIMES SQ 2'},
+  {chain:'Watson',name:'Watson SEGAMAT CENTRAL'},
+  {chain:'Watson',name:'Watson AEON RAWANG'},
+  {chain:'Watson',name:'Watson MEDAN IDAMAN'},
+  {chain:'Watson',name:'Watson BANDAR SRI PERDANA'},
+  {chain:'Watson',name:'Watson LINTAS PLAZA'},
+  {chain:'Watson',name:'Watson PASIR GUDANG JOHOR'},
+  {chain:'Watson',name:'Watson K. TERENGGANU'},
+  {chain:'Watson',name:'Watson MID VALLEY MEGAMALL'},
+  {chain:'Watson',name:'Watson AEON IPOH STATION 18'},
+  {chain:'Watson',name:'Watson BAGAN SERAI'},
+  {chain:'Watson',name:'Watson DESA SRI HARTAMAS'},
+  {chain:'Watson',name:'Watson MESRA MALL'},
+  {chain:'Watson',name:'Watson LIMBANG SARAWAK'},
+  {chain:'Watson',name:'Watson SETIA CITY MALL'},
+  {chain:'Watson',name:'Watson KUALA NERANG KEDAH'},
+  {chain:'Watson',name:'Watson KOMPLEKS BUKIT JAMBUL'},
+  {chain:'Watson',name:'Watson TRIANG PAHANG'},
+  {chain:'Watson',name:'Watson TAIPING SENTRAL MALL'},
+  {chain:'Watson',name:'Watson AEON BIG PNANG PRAI'},
+  {chain:'Watson',name:'Watson SQUARE 1 BATU PAHAT'},
+  {chain:'Watson',name:'Watson SUNGAI WANG PLAZA'},
+  {chain:'Watson',name:'Watson LOTUS\'S MUTIARA'},
+  {chain:'Watson',name:'Watson AMANJAYA MALL'},
+  {chain:'Watson',name:'Watson BEAUFORT SABAH'},
+  {chain:'Watson',name:'Watson PLAZA MERDEKA KUCHING'},
+  {chain:'Watson',name:'Watson AEON SERI MANJUNG'},
+  {chain:'Watson',name:'Watson KUALA BERANG'},
+  {chain:'Watson',name:'Watson MEGALONG MALL'},
+  {chain:'Watson',name:'Watson EASTERN MALL SIBURAN'},
+  {chain:'Watson',name:'Watson AEON BIG KLUANG'},
+  {chain:'Watson',name:'Watson TUARAN SABAH'},
+  {chain:'Watson',name:'Watson TEMERLOH MALL'},
+  {chain:'Watson',name:'Watson TANAH MERAH'},
+  {chain:'Watson',name:'Watson THE SUMMER'},
+  {chain:'Watson',name:'Watson KOTA BELUD'},
+  {chain:'Watson',name:'Watson SARIKEI'},
+  {chain:'Watson',name:'Watson JALAN SATOK'},
+  {chain:'Watson',name:'Watson SUNSHINE BERTAM'},
+  {chain:'Watson',name:'Watson CITY MALL KK'},
+  {chain:'Watson',name:'Watson LOTUS\'S SEBERANG JAYA'},
+  {chain:'Watson',name:'Watson SEGAMAT TWO'},
+  {chain:'Watson',name:'Watson SIMPANG RENGGAM'},
+  {chain:'Watson',name:'Watson SEMPORNA'},
+  {chain:'Watson',name:'Watson PONTIAN'},
+  {chain:'Watson',name:'Watson KIARA SQUARE BAHAU'},
+  {chain:'Watson',name:'Watson YONG PENG JOHOR'},
+  {chain:'Watson',name:'Watson MUADZAM SHAH PAHANG'},
+  {chain:'Watson',name:'Watson BANGI GATEWAY'},
+  {chain:'Watson',name:'Watson D MALL SERI ISKANDAR'},
+  {chain:'Watson',name:'Watson SEREMBAN PRIME MALL'},
+  {chain:'Watson',name:'Watson AEON BUKIT RAJA'},
+  {chain:'Watson',name:'Watson AEON MALL KULAI'},
+  {chain:'Watson',name:'Watson DATARAN PAHLAWAN TWO'},
+  {chain:'Watson',name:'Watson TANAH RATA CAMERON'},
+  {chain:'Watson',name:'Watson RANAU SABAH'},
+  {chain:'Watson',name:'Watson IMPERIAL CITY MALL'},
+  {chain:'Watson',name:'Watson PAPAR'},
+  {chain:'Watson',name:'Watson JASIN MELAKA'},
+  {chain:'Watson',name:'Watson PUTATAN SABAH'},
+  {chain:'Watson',name:'Watson PERLING MALL'},
+  {chain:'Watson',name:'Watson PAKA TERENGGANU'},
+  {chain:'Watson',name:'Watson GUA MUSANG'},
+  {chain:'Watson',name:'Watson FAJAR LAHAD DATU'},
+  {chain:'Watson',name:'Watson PLAZA SIMANGGANG'},
+  {chain:'Watson',name:'Watson SERIAN'},
+  {chain:'Watson',name:'Watson LOTUS\'S KLANG'},
+  {chain:'Watson',name:'Watson ALAMANDA'},
+  {chain:'Watson',name:'Watson KIP MALL BANGI'},
+  {chain:'Watson',name:'Watson AEON BUKIT MERTAJAM'},
+  {chain:'Watson',name:'Watson SUNGAI PELEK'},
+  {chain:'Watson',name:'Watson THE SPRING 2'},
+  {chain:'Watson',name:'Watson MUKAH'},
+  {chain:'Watson',name:'Watson LOTUS\'S DESA TEBRAU'},
+  {chain:'Watson',name:'Watson LOTUS\'S MANJUNG'},
+  {chain:'Watson',name:'Watson MAIN PLACE'},
+  {chain:'Watson',name:'Watson LOTUS\'S JITRA'},
+  {chain:'Watson',name:'Watson SUTERA MALL 2'},
+  {chain:'Watson',name:'Watson BALING'},
+  {chain:'Watson',name:'Watson VILLAGE MALL'},
+  {chain:'Watson',name:'Watson EVERRISE BDC'},
+  {chain:'Watson',name:'Watson PALM MALL'},
+  {chain:'Watson',name:'Watson KERIAN SENTRAL'},
+  {chain:'Watson',name:'Watson EAST COAST MALL'},
+  {chain:'Watson',name:'Watson AEON MALL TAIPING'},
+  {chain:'Watson',name:'Watson IOI CITY MALL'},
+  {chain:'Watson',name:'Watson LOTUS\'S MUTIARA RINI'},
+  {chain:'Watson',name:'Watson LOTUS\'S TANJUNG PINANG'},
+  {chain:'Watson',name:'Watson LOTUS\'S MELAKA CHENG'},
+  {chain:'Watson',name:'Watson D PULZE CYBEJAYA'},
+  {chain:'Watson',name:'Watson LOTUS\'S MERGONG'},
+  {chain:'Watson',name:'Watson TIN VILLAGE MALL'},
+  {chain:'Watson',name:'Watson BATU GAJAH'},
+  {chain:'Watson',name:'Watson RAUB PAHANG'},
+  {chain:'Watson',name:'Watson TAMAN TAS KUANTAN'},
+  {chain:'Watson',name:'Watson KUDAT'},
+  {chain:'Watson',name:'Watson JERAI PLAZA'},
+  {chain:'Watson',name:'Watson IMAGO TIMES SQUARE'},
+  {chain:'Watson',name:'Watson KOTA MARUDU'},
+  {chain:'Watson',name:'Watson HARBOUR MALL SDK'},
+  {chain:'Watson',name:'Watson TIMES SQUARE BINTULU'},
+  {chain:'Watson',name:'Watson LOTUS\'S JENJAROM'},
+  {chain:'Watson',name:'Watson SUBANG PARADE 2'},
+  {chain:'Watson',name:'Watson GERIK'},
+  {chain:'Watson',name:'Watson LOTUS\'S PUNCAK ALAM'},
+  {chain:'Watson',name:'Watson PARADIGM MALL'},
+  {chain:'Watson',name:'Watson WISMA HB'},
+  {chain:'Watson',name:'Watson G-ORANGE HOME MART'},
+  {chain:'Watson',name:'Watson C-MART JITRA'},
+  {chain:'Watson',name:'Watson 9 AVENUE MALL'},
+  {chain:'Watson',name:'Watson TEMERLOH'},
+  {chain:'Watson',name:'Watson LOTUS\'S BAHAU'},
+  {chain:'Watson',name:'Watson LOTUS\'S BANDAR BUKIT PUCHONG'},
+  {chain:'Watson',name:'Watson LOTUS\'S SHAH ALAM'},
+  {chain:'Watson',name:'Watson LOTUS\'S KULIM'},
+  {chain:'Watson',name:'Watson BERA'},
+  {chain:'Watson',name:'Watson LOTUS\'S SEREMBAN JAYA'},
+  {chain:'Watson',name:'Watson LOTUS\'S SERI ISKANDAR'},
+  {chain:'Watson',name:'Watson JALAN ALI MUAR'},
+  {chain:'Watson',name:'Watson TAPAH'},
+  {chain:'Watson',name:'Watson WAKAF CHE YEH'},
+  {chain:'Watson',name:'Watson LOTUS\'S KAMPAR'},
+  {chain:'Watson',name:'Watson PASIR MAS'},
+  {chain:'Watson',name:'Watson VIVACITY MEGAMALL'},
+  {chain:'Watson',name:'Watson SLIM RIVER'},
+  {chain:'Watson',name:'Watson CITTA MALL'},
+  {chain:'Watson',name:'Watson LOTUS\'S SEREMBAN 2'},
+  {chain:'Watson',name:'Watson LAWAS'},
+  {chain:'Watson',name:'Watson THE MINES'},
+  {chain:'Watson',name:'Watson METRO CITY MATANG'},
+  {chain:'Watson',name:'Watson TENOM'},
+  {chain:'Watson',name:'Watson PRANGIN MALL 2'},
+  {chain:'Watson',name:'Watson LOTUS\'S LUKUT'},
+  {chain:'Watson',name:'Watson JALAN BAKRI MUAR'},
+  {chain:'Watson',name:'Watson JALAN RAHMAT'},
+  {chain:'Watson',name:'Watson AEON MALL KOTA BAHRU'},
+  {chain:'Watson',name:'Watson CAMERON SQUARE'},
+  {chain:'Watson',name:'Watson LOTUS\'S SG.PETANI 2'},
+  {chain:'Watson',name:'Watson LOTUS\'S PENANG SUNGAI DUA'},
+  {chain:'Watson',name:'Watson STAR MALL MENTAKAB'},
+  {chain:'Watson',name:'Watson LOTUS\'S PUCHONG'},
+  {chain:'Watson',name:'Watson LABUAN'},
+  {chain:'Watson',name:'Watson AVENUE K'},
+  {chain:'Watson',name:'Watson KUALA KRAI'},
+  {chain:'Watson',name:'Watson LABUAN AIRPORT'},
+  {chain:'Watson',name:'Watson JALAN TUN PERAK'},
+  {chain:'Watson',name:'Watson BANDAR PUTERI PUCHONG'},
+  {chain:'Watson',name:'Watson CITY ONE KUCHING'},
+  {chain:'Watson',name:'Watson DARVEL BAY LAHAD DATU'},
+  {chain:'Watson',name:'Watson DAMANSARA CITY MALL'},
+  {chain:'Watson',name:'Watson MYDIN MALL SENAWANG'},
+  {chain:'Watson',name:'Watson LOTUS\'S BDR PUTERI BANGI'},
+  {chain:'Watson',name:'Watson LOTUS\'S SEMENYIH'},
+  {chain:'Watson',name:'Watson GATEWAY@KLIA2'},
+  {chain:'Watson',name:'Watson CENTREPOINT SEREMBAN'},
+  {chain:'Watson',name:'Watson BETONG'},
+  {chain:'Watson',name:'Watson SURIA KLCC'},
+  {chain:'Watson',name:'Watson SUNWAY VELOCITY MALL'},
+  {chain:'Watson',name:'Watson KUBOTA SQUARE'},
+  {chain:'Watson',name:'Watson MYDIN PULAU SEBANG'},
+  {chain:'Watson',name:'Watson JALAN UTAMA SEGAMAT'},
+  {chain:'Watson',name:'Watson TAMAN SRI MANJA'},
+  {chain:'Watson',name:'Watson LABIS JOHOR'},
+  {chain:'Watson',name:'Watson DESIGN VILLAGE'},
+  {chain:'Watson',name:'Watson LOTUS\'S TAIPING'},
+  {chain:'Watson',name:'Watson JALAN NANAS'},
+  {chain:'Watson',name:'Watson EMART BATU KAWAH'},
+  {chain:'Watson',name:'Watson KENINGAU'},
+  {chain:'Watson',name:'Watson SALIM SIBU'},
+  {chain:'Watson',name:'Watson EMART RIAM'},
+  {chain:'Watson',name:'Watson SARATOK'},
+  {chain:'Watson',name:'Watson EMART TUDAN'},
+  {chain:'Watson',name:'Watson JAKEL MALL'},
+  {chain:'Watson',name:'Watson AEON TEBRAU CITY'},
+  {chain:'Watson',name:'Watson SEKSYEN 16'},
+  {chain:'Watson',name:'Watson JALAN HAJI MANAN'},
+  {chain:'Watson',name:'Watson DESA PARKCITY'},
+  {chain:'Watson',name:'Watson SOGO'},
+  {chain:'Watson',name:'Watson LOTUS\'S TELUK INTAN'},
+  {chain:'Watson',name:'Watson JAYA 33'},
+  {chain:'Watson',name:'Watson PEARL AVENUE'},
+  {chain:'Watson',name:'Watson MEDAN JAYA BINTULU'},
+  {chain:'Watson',name:'Watson LOTUS\'S KAJANG'},
+  {chain:'Watson',name:'Watson FARLIM'},
+  {chain:'Watson',name:'Watson KUALA LIPIS'},
+  {chain:'Watson',name:'Watson JOHOR JAYA'},
+  {chain:'Watson',name:'Watson SEKSYEN 7'},
+  {chain:'Watson',name:'Watson GELANG PATAH'},
+  {chain:'Watson',name:'Watson THE STARLING MALL'},
+  {chain:'Watson',name:'Watson LOTUS\'S IPOH STATION 18'},
+  {chain:'Watson',name:'Watson METRO POINT COMPLEX'},
+  {chain:'Watson',name:'Watson MYTOWN'},
+  {chain:'Watson',name:'Watson LOTUS\'S BERTAM PERDANA'},
+  {chain:'Watson',name:'Watson SIPITANG PLAZA'},
+  {chain:'Watson',name:'Watson EMPIRE SUBANG'},
+  {chain:'Watson',name:'Watson KINGFISHER'},
+  {chain:'Watson',name:'Watson BANDAR RIYAL'},
+  {chain:'Watson',name:'Watson TASEK CENTRAL'},
+  {chain:'Watson',name:'Watson KSL 2'},
+  {chain:'Watson',name:'Watson DATARAN PAHLAWAN'},
+  {chain:'Watson',name:'Watson MESAMALL'},
+  {chain:'Watson',name:'Watson ATRIA GALLERY'},
+  {chain:'Watson',name:'Watson MELAWATI MALL'},
+  {chain:'Watson',name:'Watson QUEENSBAY MALL 2 (CLOSING ON 24TH MAY)'},
+  {chain:'Watson',name:'Watson SEKSYEN 9 BANGI'},
+  {chain:'Watson',name:'Watson PUNCAK JALIL'},
+  {chain:'Watson',name:'Watson TAIPAN USJ'},
+  {chain:'Watson',name:'Watson KOTA SENTOSA KUCHING'},
+  {chain:'Watson',name:'Watson SUNWAY GIZA'},
+  {chain:'Watson',name:'Watson MYDIN BUKIT MERTAJAM'},
+  {chain:'Watson',name:'Watson NU SENTRAL'},
+  {chain:'Watson',name:'Watson JALAN DIPLOMATIK'},
+  {chain:'Watson',name:'Watson AEON BANDAR DATO ONN'},
+  {chain:'Watson',name:'Watson MYDIN MERU'},
+  {chain:'Watson',name:'Watson SERI SERDANG'},
+  {chain:'Watson',name:'Watson IPC SHOPPING CENTER'},
+  {chain:'Watson',name:'Watson MID VALLEY 2'},
+  {chain:'Watson',name:'Watson KUANTAN CITY MALL'},
+  {chain:'Watson',name:'Watson TABUAN JAYA'},
+  {chain:'Watson',name:'Watson SUNSHINE SQUARE'},
+  {chain:'Watson',name:'Watson AUSTIN HEIGHTS'},
+  {chain:'Watson',name:'Watson LOTUS\'S KULAI'},
+  {chain:'Watson',name:'Watson SKS CITY MALL'},
+  {chain:'Watson',name:'Watson BAU'},
+  {chain:'Watson',name:'Watson PARADIGM MALL JB'},
+  {chain:'Watson',name:'Watson MYDIN VISTA TUNKU'},
+  {chain:'Watson',name:'Watson BANDAR PERDA'},
+  {chain:'Watson',name:'Watson PLAZA CRYSTALVILLE'},
+  {chain:'Watson',name:'Watson GAMUDA WALK'},
+  {chain:'Watson',name:'Watson MITSUI OUTLET PARK'},
+  {chain:'Watson',name:'Watson KUDAT FRIENDLY TOWN'},
+  {chain:'Watson',name:'Watson BINTANGOR'},
+  {chain:'Watson',name:'Watson SUNSHINE FARLIM'},
+  {chain:'Watson',name:'Watson MAHKOTA CHERAS'},
+  {chain:'Watson',name:'Watson NEO CYBER'},
+  {chain:'Watson',name:'Watson BANDAR SERI PUTRA'},
+  {chain:'Watson',name:'Watson KUNAK'},
+  {chain:'Watson',name:'Watson TF MUAR (CLOSING ON 30TH APRIL)'},
+  {chain:'Watson',name:'Watson 3 DAMANSARA'},
+  {chain:'Watson',name:'Watson MYDIN MUTIARA RINI'},
+  {chain:'Watson',name:'Watson KIPMALL KOTA WARISAN'},
+  {chain:'Watson',name:'Watson JETTY POINT'},
+  {chain:'Watson',name:'Watson AEON KUCHING CENTRAL'},
+  {chain:'Watson',name:'Watson TAMAN SUTERA UTAMA'},
+  {chain:'Watson',name:'Watson TF BERA'},
+  {chain:'Watson',name:'Watson KUCHAI ENTREPRENEUR 2'},
+  {chain:'Watson',name:'Watson DWITASIK CHERAS'},
+  {chain:'Watson',name:'Watson SEKINCHAN'},
+  {chain:'Watson',name:'Watson MYDIN SEREMBAN 2'},
+  {chain:'Watson',name:'Watson KIP SENAWANG'},
+  {chain:'Watson',name:'Watson INTERMARK'},
+  {chain:'Watson',name:'Watson FREEPORT A\'FAMOSA'},
+  {chain:'Watson',name:'Watson SENTUL BOULEVARD'},
+  {chain:'Watson',name:'Watson JALAN PANTAI KK'},
+  {chain:'Watson',name:'Watson PLAZA 333'},
+  {chain:'Watson',name:'Watson ATIVO PLAZA'},
+  {chain:'Watson',name:'Watson JALAN SOGA'},
+  {chain:'Watson',name:'Watson PUCHONG JAYA'},
+  {chain:'Watson',name:'Watson DE CENTRUM'},
+  {chain:'Watson',name:'Watson LANGKAWI CITY'},
+  {chain:'Watson',name:'Watson BALIK PULAU'},
+  {chain:'Watson',name:'Watson KIP MART MELAKA'},
+  {chain:'Watson',name:'Watson GALLERIA KOTARAYA'},
+  {chain:'Watson',name:'Watson KL ECO CITY'},
+  {chain:'Watson',name:'Watson BDR BARU TANAH MERAH'},
+  {chain:'Watson',name:'Watson PAYA KELADI'},
+  {chain:'Watson',name:'Watson BUKIT JELUTONG'},
+  {chain:'Watson',name:'Watson M CITY AMPANG'},
+  {chain:'Watson',name:'Watson DATARAN TEMPLER'},
+  {chain:'Watson',name:'Watson ASIA CITY KK'},
+  {chain:'Watson',name:'Watson ANGSANA IPOH MALL'},
+  {chain:'Watson',name:'Watson LOTUS\'S ECO TROPICS'},
+  {chain:'Watson',name:'Watson THE GARDENS MALL'},
+  {chain:'Watson',name:'Watson LOTUS\'S STARGATE'},
+  {chain:'Watson',name:'Watson JONKER STREET'},
+  {chain:'Watson',name:'Watson AEON BIG WANGSA MAJU'},
+  {chain:'Watson',name:'Watson MID VALLEY SOUTHKEY'},
+  {chain:'Watson',name:'Watson BANGSAR VILLAGE MALL'},
+  {chain:'Watson',name:'Watson PLAZA ARKADIA'},
+  {chain:'Watson',name:'Watson GATEWAY KLIA 2 TWO'},
+  {chain:'Watson',name:'Watson THE SPRING BINTULU'},
+  {chain:'Watson',name:'Watson CS BANGI'},
+  {chain:'Watson',name:'Watson QUILL CITY'},
+  {chain:'Watson',name:'Watson SOLARIS MONT KIARA'},
+  {chain:'Watson',name:'Watson AEON BIG TUN HUSSEIN ONN'},
+  {chain:'Watson',name:'Watson AEON NILAI'},
+  {chain:'Watson',name:'Watson PAYA BUNGA SQUARE'},
+  {chain:'Watson',name:'Watson SKYPARK SUBANG TERM'},
+  {chain:'Watson',name:'Watson TAMARIND SQUARE'},
+  {chain:'Watson',name:'Watson LOTUS\'S PLENTONG'},
+  {chain:'Watson',name:'Watson CENTRAL I-CITY'},
+  {chain:'Watson',name:'Watson MYDIN PELANGI INDAH'},
+  {chain:'Watson',name:'Watson LOTUS\'S BAGAN AJAM'},
+  {chain:'Watson',name:'Watson KIP MART KOTA TINGGI'},
+  {chain:'Watson',name:'Watson MYDIN SUBANG JAYA'},
+  {chain:'Watson',name:'Watson BERCHAM'},
+  {chain:'Watson',name:'Watson MYDIN MALL SEMENYIH'},
+  {chain:'Watson',name:'Watson ANJUNG ISKANDAR'},
+  {chain:'Watson',name:'Watson SKY AVENUE- RELOCATE'},
+  {chain:'Watson',name:'Watson SRI PETALING'},
+  {chain:'Watson',name:'Watson MYDIN KUALA TERENGGANU'},
+  {chain:'Watson',name:'Watson EVERRISE 4TH MILE'},
+  {chain:'Watson',name:'Watson LOTUS\'S KUALA SELANGOR'},
+  {chain:'Watson',name:'Watson TAMAN SEJATI'},
+  {chain:'Watson',name:'Watson JOHOR PREMIUM OUTLET'},
+  {chain:'Watson',name:'Watson SS15 TWO'},
+  {chain:'Watson',name:'Watson LOTUS\'S SETIA TROPIKA'},
+  {chain:'Watson',name:'Watson ITCC KK'},
+  {chain:'Watson',name:'Watson CALTEX PUCHONG PERMAI'},
+  {chain:'Watson',name:'Watson AEON BIG AMPANG'},
+  {chain:'Watson',name:'Watson KIP MART MASAI'},
+  {chain:'Watson',name:'Watson KOMPLEKS CHANGLOON'},
+  {chain:'Watson',name:'Watson BURMAH ROAD'},
+  {chain:'Watson',name:'Watson IOI MALL 2'},
+  {chain:'Watson',name:'Watson DATARAN JELATEK'},
+  {chain:'Watson',name:'Watson SUNWAY PUTRA'},
+  {chain:'Watson',name:'Watson SEREMBAN GATEWAY'},
+  {chain:'Watson',name:'Watson KIP TAMPOI'},
+  {chain:'Watson',name:'Watson AEON TAMAN MALURI'},
+  {chain:'Watson',name:'Watson MYDIN JASIN'},
+  {chain:'Watson',name:'Watson BEAUFORT 2'},
+  {chain:'Watson',name:'Watson BANDAR KAJANG'},
+  {chain:'Watson',name:'Watson SAUJANA UTAMA'},
+  {chain:'Watson',name:'Watson MID VALLEY SOUTHKEY2'},
+  {chain:'Watson',name:'Watson PLAZA LOW YAT'},
+  {chain:'Watson',name:'Watson C180'},
+  {chain:'Watson',name:'Watson MACALISTER VISTA'},
+  {chain:'Watson',name:'Watson PARADIGM MALL JB 2'},
+  {chain:'Watson',name:'Watson KL TRADERS'},
+  {chain:'Watson',name:'Watson HULU LANGAT'},
+  {chain:'Watson',name:'Watson TOPPEN'},
+  {chain:'Watson',name:'Watson BANDAR BARU ENSTEK'},
+  {chain:'Watson',name:'Watson AMAN CENTRAL'},
+  {chain:'Watson',name:'Watson LOTUS\'S SELAYANG'},
+  {chain:'Watson',name:'Watson BANTING 2'},
+  {chain:'Watson',name:'Watson VISTA VALLEY'},
+  {chain:'Watson',name:'Watson SRI PERMAISURI'},
+  {chain:'Watson',name:'Watson SHELL PARIT RAJA'},
+  {chain:'Watson',name:'Watson CALTEX ULU TIRAM'},
+  {chain:'Watson',name:'Watson CALTEX KLANG'},
+  {chain:'Watson',name:'Watson PETRONAS JALAN KOLAM AYER LAMA'},
+  {chain:'Watson',name:'Watson TELOK PANGLIMA GARANG'},
+  {chain:'Watson',name:'Watson TROPICANA GARDEN'},
+  {chain:'Watson',name:'Watson MENGGATAL'},
+  {chain:'Watson',name:'Watson KL EAST MALL'},
+  {chain:'Watson',name:'Watson WANGSA WALK'},
+  {chain:'Watson',name:'Watson PEARL CITY MALL'},
+  {chain:'Watson',name:'Watson KTCC MALL'},
+  {chain:'Watson',name:'Watson AMERIN MALL'},
+  {chain:'Watson',name:'Watson C-MART NIBONG TEBAL'},
+  {chain:'Watson',name:'Watson BOULEVARD BINTULU'},
+  {chain:'Watson',name:'Watson PARAGON MARKET PLACE'},
+  {chain:'Watson',name:'Watson CALTEX LEBUH SPA'},
+  {chain:'Watson',name:'Watson CHUKAI 2'},
+  {chain:'Watson',name:'Watson U SENTRAL SEGAMAT'},
+  {chain:'Watson',name:'Watson LIMBANG PLAZA'},
+  {chain:'Watson',name:'Watson JALAN TUANKU OSMAN'},
+  {chain:'Watson',name:'Watson JALAN TELAWI BANGSAR'},
+  {chain:'Watson',name:'Watson BANDAR SAUJANA PUTRA'},
+  {chain:'Watson',name:'Watson PONTIAN KOTA EMAS'},
+  {chain:'Watson',name:'Watson JALIL LINK'},
+  {chain:'Watson',name:'Watson ECO BOTANIC'},
+  {chain:'Watson',name:'Watson PAPAR BENONI'},
+  {chain:'Watson',name:'Watson SUNGGALA GATEWAY'},
+  {chain:'Watson',name:'Watson JALAN PARIT DALAM KB'},
+  {chain:'Watson',name:'Watson E-MART TABUAN'},
+  {chain:'Watson',name:'Watson CALTEX KOTA MASAI'},
+  {chain:'Watson',name:'Watson BANDAR SERI ALAM'},
+  {chain:'Watson',name:'Watson SRI SENDAYAN'},
+  {chain:'Watson',name:'Watson 163 RETAIL PARK'},
+  {chain:'Watson',name:'Watson KLANG PARADE'},
+  {chain:'Watson',name:'Watson 1 MONT KIARA'},
+  {chain:'Watson',name:'Watson LARKIN PERDANA'},
+  {chain:'Watson',name:'Watson QUAYSIDE'},
+  {chain:'Watson',name:'Watson JALAN CECAWI'},
+  {chain:'Watson',name:'Watson MYDIN JENGKA'},
+  {chain:'Watson',name:'Watson OLIVE HILL'},
+  {chain:'Watson',name:'Watson PETRONAS SEC 13'},
+  {chain:'Watson',name:'Watson TRILIUM'},
+  {chain:'Watson',name:'Watson SS15 COURTYARD'},
+  {chain:'Watson',name:'Watson AEON SHAH ALAM'},
+  {chain:'Watson',name:'Watson JALAN AIR PUTIH'},
+  {chain:'Watson',name:'Watson EMPIRE SUBANG 2'},
+  {chain:'Watson',name:'Watson DUYUNG BESTARI'},
+  {chain:'Watson',name:'Watson JERANTUT'},
+  {chain:'Watson',name:'Watson KIP DESA COALFIELDS'},
+  {chain:'Watson',name:'Watson 88 MALL'},
+  {chain:'Watson',name:'Watson DUNGUN 2'},
+  {chain:'Watson',name:'Watson PETRON UKAY PERDANA'},
+  {chain:'Watson',name:'Watson KUALA PILAH'},
+  {chain:'Watson',name:'Watson JELATANG ALOR GAJAH'},
+  {chain:'Watson',name:'Watson KUALA KANGSAR'},
+  {chain:'Watson',name:'Watson GENTING PERMAI'},
+  {chain:'Watson',name:'Watson CALTEX BATANG KALI'},
+  {chain:'Watson',name:'Watson SETIA CITY MALL 2'},
+  {chain:'Watson',name:'Watson TSB SG BULOH'},
+  {chain:'Watson',name:'Watson SETIA TAIPAN'},
+  {chain:'Watson',name:'Watson BUKIT SENTOSA RAWANG'},
+  {chain:'Watson',name:'Watson D\'GARDEN B.PAHAT'},
+  {chain:'Watson',name:'Watson JALAN KEBUN NENAS'},
+  {chain:'Watson',name:'Watson LEE LING COMMERCIAL'},
+  {chain:'Watson',name:'Watson BOTANICA BALIK PULAU'},
+  {chain:'Watson',name:'Watson PASIR PUTEH'},
+  {chain:'Watson',name:'Watson KANGAR'},
+  {chain:'Watson',name:'Watson AUTO CITY'},
+  {chain:'Watson',name:'Watson AYER KEROH HEIGHTS'},
+  {chain:'Watson',name:'Watson AIMAN MALL'},
+  {chain:'Watson',name:'Watson IOI CONEZION'},
+  {chain:'Watson',name:'Watson SETIA ALAM 2'},
+  {chain:'Watson',name:'Watson BUKIT BAKRI'},
+  {chain:'Watson',name:'Watson SUNWAY GEO'},
+  {chain:'Watson',name:'Watson EMART MOYAN'},
+  {chain:'Watson',name:'Watson PEKAN SENTRAL'},
+  {chain:'Watson',name:'Watson SEREMBAN TOWN'},
+  {chain:'Watson',name:'Watson EKO CHERAS'},
+  {chain:'Watson',name:'Watson CAMERON CENTRUM'},
+  {chain:'Watson',name:'Watson JLN GAMBANG KUANTAN'},
+  {chain:'Watson',name:'Watson MAXIM CITYLIGHTS'},
+  {chain:'Watson',name:'Watson REMBAU SENTRAL'},
+  {chain:'Watson',name:'Watson KLIA QUARTERS'},
+  {chain:'Watson',name:'Watson PAVILION BUKIT JALIL'},
+  {chain:'Watson',name:'Watson PRESINT 8'},
+  {chain:'Watson',name:'Watson BKT BARU MELAKA'},
+  {chain:'Watson',name:'Watson TMN PELANGI SEMENYIH'},
+  {chain:'Watson',name:'Watson IOI RIO PUCHONG'},
+  {chain:'Watson',name:'Watson SECTION 20'},
+  {chain:'Watson',name:'Watson KUALA KETIL'},
+  {chain:'Watson',name:'Watson SERDANG PERDANA'},
+  {chain:'Watson',name:'Watson GREENTOWN IPOH'},
+  {chain:'Watson',name:'Watson TANGKAK'},
+  {chain:'Watson',name:'Watson MUTIARA RINI'},
+  {chain:'Watson',name:'Watson MERLIMAU'},
+  {chain:'Watson',name:'Watson DENAI ALAM'},
+  {chain:'Watson',name:'Watson JENGKA'},
+  {chain:'Watson',name:'Watson ONE KRUBONG'},
+  {chain:'Watson',name:'Watson GUNUNG RAPAT'},
+  {chain:'Watson',name:'Watson LOTUS\'S PULAI HARTAMAS'},
+  {chain:'Watson',name:'Watson LOTUS\'S BDR PUTERI JAYA'},
+  {chain:'Watson',name:'Watson LAMAN RIMBUNAN KEPONG'},
+  {chain:'Watson',name:'Watson PUTRA HEIGHTS'},
+  {chain:'Watson',name:'Watson JADE HILLS'},
+  {chain:'Watson',name:'Watson PENGKALAN CHEPA'},
+  {chain:'Watson',name:'Watson TAMPARULI'},
+  {chain:'Watson',name:'Watson MYDIN TUNJUNG'},
+  {chain:'Watson',name:'Watson SUNGAI UDANG'},
+  {chain:'Watson',name:'Watson SELAMA PERAK'},
+  {chain:'Watson',name:'Watson RAUB 2'},
+  {chain:'Watson',name:'Watson SABAK BERNAM'},
+  {chain:'Watson',name:'Watson TD CENTRAL'},
+  {chain:'Watson',name:'Watson LENGGONG PERAK'},
+  {chain:'Watson',name:'Watson BALUNG TAWAU'},
+  {chain:'Watson',name:'Watson SUNGAI BESAR'},
+  {chain:'Watson',name:'Watson ALAM BUDIMAN'},
+  {chain:'Watson',name:'Watson PEKAN KUAH'},
+  {chain:'Watson',name:'Watson KAPIT SARAWAK'},
+  {chain:'Watson',name:'Watson BANDAR BENTARA TUMPAT'},
+  {chain:'Watson',name:'Watson GRAVITAS PENANG'},
+  {chain:'Watson',name:'Watson TAMAN KINRARA PUCHONG'},
+  {chain:'Watson',name:'Watson HARMONI GEMAS'},
+  {chain:'Watson',name:'Watson SIMPANG PULAI'},
+  {chain:'Watson',name:'Watson JASIN BESTARI'},
+  {chain:'Watson',name:'Watson SUBANG PERDANA'},
+  {chain:'Watson',name:'Watson EMART KING CENTRE'},
+  {chain:'Watson',name:'Watson SALAK PERDANA'},
+  {chain:'Watson',name:'Watson SUNGAI BAKAP PENANG'},
+  {chain:'Watson',name:'Watson BUKIT INDAH SKUDAI'},
+  {chain:'Watson',name:'Watson LOTUS\'S BUKIT BERUNTUNG'},
+  {chain:'Watson',name:'Watson KLEBANG RESTU'},
+  {chain:'Watson',name:'Watson TTDI GROVE'},
+  {chain:'Watson',name:'Watson SIKAMAT'},
+  {chain:'Watson',name:'Watson MASJID TANAH MELAKA'},
+  {chain:'Watson',name:'Watson SRI AMAN SQUARE'},
+  {chain:'Watson',name:'Watson CALTEX ECO GRANDEUR'},
+  {chain:'Watson',name:'Watson BDR TASIK PUTERI'},
+  {chain:'Watson',name:'Watson SRI RAMPAI'},
+  {chain:'Watson',name:'Watson PAVILION BUNDUSAN'},
+  {chain:'Watson',name:'Watson EVO BANGI'},
+  {chain:'Watson',name:'Watson ALL SEASONS PLACE'},
+  {chain:'Watson',name:'Watson TAMAN SAUJANA KLANG'},
+  {chain:'Watson',name:'Watson ECOHILL SEMENYIH'},
+  {chain:'Watson',name:'Watson PENDANG KEDAH'},
+  {chain:'Watson',name:'Watson DAMAI PERDANA'},
+  {chain:'Watson',name:'Watson DAMANSARA PERDANA'},
+  {chain:'Watson',name:'Watson CALTEX TEMIANG'},
+  {chain:'Watson',name:'Watson PUCHONG PRIMA'},
+  {chain:'Watson',name:'Watson CALTEX S2 HEIGHT'},
+  {chain:'Watson',name:'Watson SERAI WANGI MALL'},
+  {chain:'Watson',name:'Watson ICONIC POINT'},
+  {chain:'Watson',name:'Watson TROPIKA BKT JALIL'},
+  {chain:'Watson',name:'Watson CALTEX ULU YAM'},
+  {chain:'Watson',name:'Watson TANJONG MALIM 2'},
+  {chain:'Watson',name:'Watson SHELL MOUNT AUSTIN'},
+  {chain:'Watson',name:'Watson TMN IMPIAN EMAS'},
+  {chain:'Watson',name:'Watson THE FOOD MERCHANT OUG'},
+  {chain:'Watson',name:'Watson TAMAN UNIVERSITI'},
+  {chain:'Watson',name:'Watson JENJAROM'},
+  {chain:'Watson',name:'Watson S\'MART PANDAN'},
+  {chain:'Watson',name:'Watson UPTOWN JELAWAT'},
+  {chain:'Watson',name:'Watson CALTEX PERSIARAN MOKHTAR DAHARI'},
+  {chain:'Watson',name:'Watson CALTEX LEGENDA HEIGHTS'},
+  {chain:'Watson',name:'Watson JLN ONG YI HOW'},
+  {chain:'Watson',name:'Watson TANJUNG KARANG'},
+  {chain:'Watson',name:'Watson BEHRANG'},
+  {chain:'Watson',name:'Watson TMN SEGAR CHERAS'},
+  {chain:'Watson',name:'Watson LUKUT TOWN'},
+  {chain:'Watson',name:'Watson RIMBA SQUARE'},
+  {chain:'Watson',name:'Watson JALAN RAJA UDA'},
+  {chain:'Watson',name:'Watson BANDAR BARU NILAI'},
+  {chain:'Watson',name:'Watson ECO BLOOM'},
+  {chain:'Watson',name:'Watson BENTONG 2'},
+  {chain:'Watson',name:'Watson PELANGI SQUARE'},
+  {chain:'Watson',name:'Watson KUALA BERANG 2'},
+  {chain:'Watson',name:'Watson MAJU UTAMA'},
+  {chain:'Watson',name:'Watson ADDA HEIGHTS'},
+  {chain:'Watson',name:'Watson GURNEY PARAGON T'},
+  {chain:'Watson',name:'Watson JALAN TAMPOI'},
+  {chain:'Watson',name:'Watson PERMAS JAYA'},
+  {chain:'Watson',name:'Watson INANAM MALL'},
+  {chain:'Watson',name:'Watson KEMAMAN EAST'},
+  {chain:'Watson',name:'Watson IMPIAN PRISMA'},
+  {chain:'Watson',name:'Watson TD POINT'},
+  {chain:'Watson',name:'Watson IOI CITY MALL 2'},
+  {chain:'Watson',name:'Watson BATU GAJAH PERDANA'},
+  {chain:'Watson',name:'Watson BANDAR RIMBAYU'},
+  {chain:'Watson',name:'Watson KG RAJA BESUT'},
+  {chain:'Watson',name:'Watson BATU BERENDAM'},
+  {chain:'Watson',name:'Watson JALAN TERMINAL KAMPAR'},
+  {chain:'Watson',name:'Watson LOTUS\'S INDERA MAHKOTA'},
+  {chain:'Watson',name:'Watson KSL ESPLANADE MALL'},
+  {chain:'Watson',name:'Watson KULIM LANDMARK CITY'},
+  {chain:'Watson',name:'Watson BUKIT GAMBIR'},
+  {chain:'Watson',name:'Watson SOLARIS TUARAN'},
+  {chain:'Watson',name:'Watson TTDI JAYA'},
+  {chain:'Watson',name:'Watson SIBU JAYA'},
+  {chain:'Watson',name:'Watson UDA MURNI'},
+  {chain:'Watson',name:'Watson GUAR CHEMPEDAK'},
+  {chain:'Watson',name:'Watson MUADZAM SHAH 2'},
+  {chain:'Watson',name:'Watson BANDAR PUTERI PUCHONG 2'},
+  {chain:'Watson',name:'Watson SITIAWAN PERAK'},
+  {chain:'Watson',name:'Watson UNICITY SIBU'},
+  {chain:'Watson',name:'Watson PUSAT PERNIAGAAN SILIBIN'},
+  {chain:'Watson',name:'Watson ORCHARD PLAZA'},
+  {chain:'Watson',name:'Watson PUSAT PERNIAGAAN BARRY'},
+  {chain:'Watson',name:'Watson BANTING 3'},
+  {chain:'Watson',name:'Watson EMART LINTAS JAYA'},
+  {chain:'Watson',name:'Watson BANDAR TASEK RAJA'},
+  {chain:'Watson',name:'Watson VERSIS KLUANG'},
+  {chain:'Watson',name:'Watson KCC CITY MUAR'},
+  {chain:'Watson',name:'Watson SHAFTSBURY SQUARE'},
+  {chain:'Watson',name:'Watson PEARL POINT'},
+  {chain:'Watson',name:'Watson TELUK PULAI (relocate to 2324)'},
+  {chain:'Watson',name:'Watson TAMAN EQUINE'},
+  {chain:'Watson',name:'Watson SOUTHVILLE CITY'},
+  {chain:'Watson',name:'Watson GONG BADAK'},
+  {chain:'Watson',name:'Watson BUKIT TINGGI 2'},
+  {chain:'Watson',name:'Watson LOTUS\'S KLUANG'},
+  {chain:'Watson',name:'Watson LOTUS\'S MUAR'},
+  {chain:'Watson',name:'Watson TAMAN KENANGAN'},
+  {chain:'Watson',name:'Watson CONVENT ALOR SETAR'},
+  {chain:'Watson',name:'Watson PAVILION DAMANSARA HEIGHTS'},
+  {chain:'Watson',name:'Watson CALTEX BUKIT RAJA'},
+  {chain:'Watson',name:'Watson ANGGUN CITY RAWANG'},
+  {chain:'Watson',name:'Watson MIRI TIMES SQUARE'},
+  {chain:'Watson',name:'Watson THE EXCHANGE TRX'},
+  {chain:'Watson',name:'Watson KOTA WARISAN'},
+  {chain:'Watson',name:'Watson BENTONG PRIMA'},
+  {chain:'Watson',name:'Watson 68 AVENUE GELANG PATAH'},
+  {chain:'Watson',name:'Watson CALTEX BESTARI JAYA'},
+  {chain:'Watson',name:'Watson BALOK SENTRAL'},
+  {chain:'Watson',name:'Watson MALIM JAYA'},
+  {chain:'Watson',name:'Watson BENUT PONTIAN'},
+  {chain:'Watson',name:'Watson KUALA SUNGAI BARU'},
+  {chain:'Watson',name:'Watson SHELL JLN HUTAN KMPG'},
+  {chain:'Watson',name:'Watson LAMAN FIRDAUS K.KRAI'},
+  {chain:'Watson',name:'Watson BINTULU TERMINAL'},
+  {chain:'Watson',name:'Watson JERANTUT 2'},
+  {chain:'Watson',name:'Watson MERANTI JAYA'},
+  {chain:'Watson',name:'Watson TAMAN SEMARAK, TAWAU'},
+  {chain:'Watson',name:'Watson SARIKEI 2'},
+  {chain:'Watson',name:'Watson PLAZA PELANGI'},
+  {chain:'Watson',name:'Watson SALAK TINGGI'},
+  {chain:'Watson',name:'Watson RASAH PRIMA'},
+  {chain:'Watson',name:'Watson SENA CENTRAL'},
+  {chain:'Watson',name:'Watson JALAN DIPLOMATIK'},
+  {chain:'Watson',name:'Watson TONG TALUN SEMPORNA'},
+  {chain:'Watson',name:'Watson RIVERFRONT SUNGAI PETANI'},
+  {chain:'Watson',name:'Watson KOTA TINGGI 2'},
+  {chain:'Watson',name:'Watson AYER TAWAR'},
+  {chain:'Watson',name:'Watson JBCC, JOHOR'},
+  {chain:'Watson',name:'Watson TASEK CENTRAL'},
+  {chain:'Watson',name:'Watson MAGANTING PLAZA, KUNAK'},
+  {chain:'Watson',name:'Watson G-ORANGE GUA MUSANG'},
+  {chain:'Watson',name:'Watson CITY SQUARE JB 2'},
+  {chain:'Watson',name:'Watson PELITA COMMERCIAL CENTER MIRI'},
+  {chain:'Watson',name:'Watson SRI MUDA, SELANGOR'},
+  {chain:'Watson',name:'Watson TAMAN TUANKU HAMINAH'},
+  {chain:'Watson',name:'Watson TANAH MERAH, KELANTAN'},
+  {chain:'Watson',name:'Watson ATRIA MALL, SELANGOR'},
+  {chain:'Watson',name:'Watson THE SPRING KUCHING'},
+  {chain:'Watson',name:'Watson CALTEX ECO ARDENCE'},
+  {chain:'Watson',name:'Watson U SENTRAL MASAI'},
+  {chain:'Watson',name:'Watson SUNWAY BIG BOX'},
+  {chain:'Watson',name:'Watson KOTA MASAI'},
+  {chain:'Watson',name:'Watson ELMINA LAKESIDE MALL'},
+  {chain:'Watson',name:'Watson JOHOR PREMIUM OUTLET'},
+  {chain:'Watson',name:'Watson SUNWAY CARNIVAL T, PENANG'},
+  {chain:'Watson',name:'Watson THE COMMUNE, JOHOR'},
+  {chain:'Watson',name:'Watson AEROVILLE MALL'},
+  {chain:'Watson',name:'Watson MEGAH RISE MALL'},
+  {chain:'Watson',name:'Watson KOK LANAS'},
+  {chain:'Watson',name:'Watson PD WATERFRONT'},
+  {chain:'Watson',name:'Watson SENADIN MIRI'},
+  {chain:'Watson',name:'Watson SUTERA MALL R, JOHOR'},
+  {chain:'Watson',name:'Watson AEON KULAIJAYA'},
+  {chain:'Watson',name:'Watson KOTA KEMUNING'},
+  {chain:'Watson',name:'Watson SUBANG PARADE'},
+  {chain:'Watson',name:'Watson KOTA PADAWAN MALL'},
+  {chain:'Watson',name:'Watson KUALA ROMPIN'},
+  {chain:'Watson',name:'Watson GANGSA JAYA'},
+  {chain:'Watson',name:'Watson 168 PARK SELAYANG'},
+  {chain:'Watson',name:'Watson GURNEY PLAZA 2'},
+  {chain:'Watson',name:'Watson SUNSHINE MALL, PENANG'},
+  {chain:'Watson',name:'Watson MAYANG MALL'},
+  {chain:'Watson',name:'Watson BANDAR PRIMA SENAWANG'},
+  {chain:'Watson',name:'Watson ECOHILL TAIPAN'},
+  {chain:'Watson',name:'Watson LOTUS BANDAR RIMBAYU'},
+  {chain:'Watson',name:'Watson TELOK MAS MELAKA'},
+  {chain:'Watson',name:'Watson MERCHANT SQUARE SENDAYAN'},
+  {chain:'Watson',name:'Watson SKY AVENUE 2'},
+  {chain:'Watson',name:'Watson LARKIN JUNCTION'},
+  {chain:'Watson',name:'Watson SENAI, KULAI'},
+  {chain:'Watson',name:'Watson KELANG LAMA SQ, KULIM'},
+  {chain:'Watson',name:'Watson PARKLANE PAPAR'},
+  {chain:'Watson',name:'Watson GARDEN HOMES'},
+  {chain:'Watson',name:'Watson KOTASAS KUANTAN'},
+  {chain:'Watson',name:'Watson PENDANG 2'},
+  {chain:'Watson',name:'Watson SETIA TROPIKA'},
+  {chain:'Watson',name:'Watson CENGAL JAYA MALL'},
+  {chain:'Watson',name:'Watson CENTRIO SQUARE'},
+  {chain:'Watson',name:'Watson PAGOH JAYA'},
+  {chain:'Watson',name:'Watson NADAYU 801'},
+  {chain:'Watson',name:'Watson SUNWAY CARNIVAL R'},
+  {chain:'Watson',name:'Watson LUNDU'},
+  {chain:'Watson',name:'Watson MYRA PARK MARKETPLACE'},
+  {chain:'Watson',name:'Watson GEMENCHEH'},
+  {chain:'Watson',name:'Watson TASEK GELUGOR'},
+  {chain:'Watson',name:'Watson CENANG MALL'},
+  {chain:'Watson',name:'Watson TF BATU CAVES'},
+  {chain:'Watson',name:'Watson SUNWAY PYRAMID 2'},
+  {chain:'Watson',name:'Watson GENTING HIGHLAND PRE'},
+  {chain:'Watson',name:'Watson JALAN SOGA BT. PAHAT'},
+  {chain:'Watson',name:'Watson FINANCIAL PARK LABUAN'},
+  {chain:'Watson',name:'Watson KOTA PUTERI, PASIR GUDANG'},
+  {chain:'Watson',name:'Watson CREST AUSTIN TEBRAU'},
+  {chain:'Watson',name:'Watson I-MOLEK, MELAKA'},
+  {chain:'Watson',name:'Watson LIMBONGAN'},
+  {chain:'Watson',name:'Watson BANDAR BARU KENINGAU, SABAH'},
+  {chain:'Watson',name:'Watson HEXA WALK, SEPUTEH'},
+  {chain:'Watson',name:'Watson IMPIANA SQUARE, KLUANG'},
+  {chain:'Watson',name:'Watson MITC MELAKA TENGAH'},
+  {chain:'Watson',name:'Watson YOU CITY, CHERAS'},
+  {chain:'Watson',name:'Watson OLD STREET, BATU PAHAT (OSBP)'},
+  {chain:'Watson',name:'Watson NU SENTRAL 2'},
+  {chain:'Watson',name:'Watson Cheras Traders Square'},
+  {chain:'Watson',name:'Watson CHERAS TRADERS SQUARE (CTSQ)'},
+  {chain:'Watson',name:'Watson Seksyen 13, Shah Alam (SKSA)'},
+  {chain:'Watson',name:'Watson NU EMPIRE RE(NUEM)'},
+  {chain:'Watson',name:'Watson SUNWAY SQUARE MALL (SWSQ)'},
+  {chain:'Watson',name:'Watson TROPICANA AMAN (TRPC)'},
+  {chain:'Watson',name:'Watson SENTOSA SQUARE, RAWANG (STSQ)'},
+  {chain:'Watson',name:'Watson MEGA SQUARE KUANTAN (MGSQ)'},
+  {chain:'Watson',name:'Watson GARDEN CITY, TAWAU (GDCT)'},
+  {chain:'Watson',name:'Watson ST ROSYAM MALL,KLANG (STRM)'},
+  {chain:'Watson',name:'Watson WESTFIELD POINT JUCHING (WFPT)'},
+  {chain:'Watson',name:'Watson KOMPLEKS PKNS SHAH ALAM (KPSA)'},
+  {chain:'Watson',name:'Watson PANTAI REMIS, MANJUNG (PTRM)'},
+  {chain:'Watson',name:'Watson MIRAI RESIDENCES, KAJANG (MRRD)'},
+  {chain:'Watson',name:'Watson LEPAPA LAWAS MALL (LPLW)'},
+  {chain:'Watson',name:'Watson IMAGO TIMES SQUARE KK (R)(ITSQ)'},
+  {chain:'Watson',name:'Watson M2310 MEGA SQUARE KUANTAN (MGSQ)'},
+  {chain:'Watson',name:'Watson TAMAN GAYA ULU TIRAM (TGUT)'},
+  {chain:'Watson',name:'Watson CENTRAL I-CITY PINK (CICT)'},
+  {chain:'Watson',name:'Watson SKS MART SKUDAI (SKSM)'},
+  {chain:'Watson',name:'Watson PINNACLE MALL SRI PETALING (PNCL)'},
+  {chain:'Watson',name:'Watson BANDAR BUKIT RAJA KLANG (BBRK)'},
+  {chain:'Watson',name:'Watson EMPIRE CITY (EMCT) HEXTAR WORLD'},
+  {chain:'Watson',name:'Watson KANGAR JAYA MALL (KGJM)'},
+  {chain:'Watson',name:'Watson GIANT PLENTONG TEBRAU (GPTT)'},
+  {chain:'Watson',name:'Watson TAMAN NUSANTARA SKUDAI (TMNS)'},
+  {chain:'Watson',name:'Watson BETONG TIMES SQUARE (BTSQ)'},
+  {chain:'Watson',name:'Watson EMART SEJINGKAT KUCHING (EMSJ)'},
+  {chain:'Watson',name:'Watson MUTIARA MAS, SKUDAI (MTMS)'},
+  {chain:'Watson',name:'Watson TELUK PULAI (R) (TLPL)'},
+  {chain:'Watson',name:'Watson TAMBUNAN SABAH (TBSB)'},
+  {chain:'Watson',name:'Watson SKS CITY MALL JBCC (SKSJ)'},
+  {chain:'Watson',name:'Watson EAST COAST MALL PINK (ECMP)'},
+  {chain:'Watson',name:'Watson PENGKALAN UTAMA IPOH (PUIP)'},
+  {chain:'Watson',name:'Watson RENGIT BATU PAHAT (RGBP)'},
+  {chain:'Watson',name:'Watson TANGGA BATU PERDANA, MELAKA TENGAH (TBPM)'},
+  {chain:'Watson',name:'Watson TANGGA BATU PERDANA, MELAKA TENGAH (TBPM)'},
+  {chain:'Watson',name:'Watson ECO HORIZON PENANG (ECHP)'},
+  {chain:'Watson',name:'Watson DAMANSARA ALIFF, SKUDAI (DASJ)'},
+  {chain:'Watson',name:'Watson I-PEAK LAHAD DATU (IPLD)'},
+  {chain:'Watson',name:'Watson JALAN GAYA KK (JGKK)'},
+  {chain:'Watson',name:'Watson RENGIT BATU PAHAT (RGBP)'},
+  {chain:'Watson',name:'Watson KINABATANGAN SABAH (KNBT)'},
+  {chain:'Watson',name:'Watson BANDAR SRI PERDANA SANDAKAN (BSPD)'},
+  {chain:'Watson',name:'Watson SURIA SABAH PINK (SSSP)'},
+  {chain:'Watson',name:'Watson PENGKALAN UTAMA IPOH (PUIP)'},
+  {chain:'Watson',name:'Watson SAUJANA PERDANA, SUNGAI BULOH (SPSB)'},
+  {chain:'Watson',name:'Watson TAMAN JRK DELTA, PJ (TJDP)'},
+  {chain:'Watson',name:'Watson UPTOWN MACHANG (UPMG)'},
+  {chain:'Watson',name:'Watson SUMMERSKYE BAYAN LEPAS (SSBL)'},
+  {chain:'Watson',name:'Watson RAZAK CITY SUNGAI BESI (RCSB)'},
+  {chain:'Watson',name:'Watson IOI MALL DAMANSARA (IOID)'}
+];
+const DEFAULT_BRANDS = ['Beauty Of Joseon','Heimish','COSRX','Anua','Some By Mi','Skin1004','Isntree','Axis-Y'];
+const DEFAULT_MERCH = ['Aiman','Coconut','Cornelia','Kelvin'];
+
+// ============ STATE ============
+let records = [];
+let projects = [];
+let outlets = JSON.parse(localStorage.getItem('skmy_outlets')||JSON.stringify(DEFAULT_OUTLETS));
+let brands = JSON.parse(localStorage.getItem('skmy_brands')||JSON.stringify(DEFAULT_BRANDS));
+let merchs = JSON.parse(localStorage.getItem('skmy_merchs')||JSON.stringify(DEFAULT_MERCH));
+let cloudName = CLOUDINARY_CLOUD;
+let uploadPreset = CLOUDINARY_PRESET;
+
+let pendingPhotos = []; // {dataUrl, file, name, brands:[]}
+let selectedType = '';
+let editingProjectId = null;
+let shareParams = {};
+
+// ============ INIT ============
+document.getElementById('visit-date').value = new Date().toISOString().split('T')[0];
+document.getElementById('proj-start').value = new Date().toISOString().split('T')[0];
+document.getElementById('cfg-cloud').value = cloudName;
+document.getElementById('cfg-preset').value = uploadPreset;
+
+// Check if share view
+const urlParams = new URLSearchParams(window.location.search);
+if (urlParams.has('share')) {
+  initShareView(urlParams);
+} else {
+  populateAllSelects();
+  renderSettings();
+}
+
+// ============ PAGES ============
+function showPage(p, el) {
+  document.querySelectorAll('.page').forEach(x=>x.classList.remove('active'));
+  document.querySelectorAll('.nav-tab').forEach(x=>x.classList.remove('active'));
+  document.getElementById('page-'+p).classList.add('active');
+  if(el) el.classList.add('active');
+  if(p==='records'){renderStats();renderRecords();populateFilterSelects();}
+  if(p==='projects') renderProjects();
+  if(p==='report'){populateReportSelects();renderReport();}
+  if(p==='settings') renderSettings();
+}
+
+// ============ SELECTS ============
+async function populateAllSelects() {
+  // Outlet
+  const oSel = document.getElementById('outlet');
+  const groups = {};
+  outlets.forEach(o=>{if(!groups[o.chain])groups[o.chain]=[];groups[o.chain].push(o.name);});
+  oSel.innerHTML = '<option value="">Select outlet...</option>';
+  Object.entries(groups).sort().forEach(([chain,names])=>{
+    const g = document.createElement('optgroup'); g.label = chain;
+    names.sort().forEach(n=>{const op=document.createElement('option');op.value=n;op.textContent=n;g.appendChild(op);});
+    oSel.appendChild(g);
+  });
+  // Brand dropdown
+  const bSel = document.getElementById('brand-select-hidden');
+  // Merch
+  const mSel = document.getElementById('merch-name');
+  mSel.innerHTML = '<option value="">Select...</option>'+merchs.map(m=>`<option>${m}</option>`).join('');
+  // Project
+  const pSel = document.getElementById('project-select');
+  try {
+    const projs = await sbGet('projects');
+    projects = projs;
+    pSel.innerHTML = '<option value="">No project</option>'+projects.filter(p=>p.status!=='Completed').map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
+  } catch(e) { pSel.innerHTML = '<option value="">No project</option>'; }
+  // Proj brand modal
+  document.getElementById('proj-brand').innerHTML = '<option value="">All / General</option>'+brands.map(b=>`<option>${b}</option>`).join('');
+  // Update photo taggers
+  renderPhotoTagger();
+}
+
+function populateFilterSelects() {
+  document.getElementById('f-brand').innerHTML = '<option value="">All Brands</option>'+brands.map(b=>`<option>${b}</option>`).join('');
+  const usedOutlets = [...new Set(records.map(r=>r.outlet))].sort();
+  document.getElementById('f-outlet').innerHTML = '<option value="">All Outlets</option>'+usedOutlets.map(o=>`<option>${o}</option>`).join('');
+}
+
+function populateReportSelects() {
+  document.getElementById('report-brand').innerHTML = '<option value="">All Brands</option>'+brands.map(b=>`<option>${b}</option>`).join('');
+}
+
+// ============ TYPE ============
+function selectType(t,el) {
+  selectedType = t;
+  document.querySelectorAll('.type-card').forEach(b=>b.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById('project-field').style.display = t==='Project'?'block':'none';
+}
+
+// ============ PHOTOS & TAGGING ============
+function handleFiles(files) {
+  Array.from(files).forEach(file=>{
+    const reader = new FileReader();
+    reader.onload = e=>{
+      pendingPhotos.push({dataUrl:e.target.result, file, name:file.name, brands:[]});
+      renderPhotoTagger();
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function renderPhotoTagger() {
+  const container = document.getElementById('photo-tagger');
+  if (!pendingPhotos.length) { container.innerHTML=''; return; }
+  container.innerHTML = pendingPhotos.map((p,i)=>`
+    <div class="photo-tag-row">
+      <img class="photo-tag-thumb" src="${p.dataUrl}" onclick="openLightbox('${p.dataUrl}','')">
+      <div class="photo-tag-info">
+        <div class="photo-tag-name">${p.name}</div>
+        <div class="photo-tag-brands">
+          ${brands.map(b=>`<button class="photo-brand-chip ${p.brands.includes(b)?'selected':''}" onclick="togglePhotoBrand(${i},'${b}')">${b}</button>`).join('')}
+        </div>
+      </div>
+      <button class="photo-remove" onclick="removePhoto(${i})">✕</button>
+    </div>`).join('');
+}
+
+function togglePhotoBrand(photoIdx, brand) {
+  const p = pendingPhotos[photoIdx];
+  const i = p.brands.indexOf(brand);
+  if (i===-1) p.brands.push(brand); else p.brands.splice(i,1);
+  renderPhotoTagger();
+}
+
+function removePhoto(i) { pendingPhotos.splice(i,1); renderPhotoTagger(); }
+
+// ============ SUBMIT ============
+async function submitRecord() {
+  const outlet = document.getElementById('outlet').value;
+  const date = document.getElementById('visit-date').value;
+  const merch = document.getElementById('merch-name').value;
+  const notes = document.getElementById('notes').value.trim();
+  const projectId = document.getElementById('project-select').value;
+
+  if (!outlet||!date||!selectedType) return showToast('Please fill outlet, date & type','err');
+  if (!pendingPhotos.length) return showToast('Please upload at least one photo','err');
+
+  const btn = document.getElementById('submit-btn');
+  btn.disabled = true;
+  btn.textContent = 'Uploading...';
+
+  const progressBox = document.getElementById('upload-progress');
+  const progressBar = document.getElementById('progress-bar');
+  const progressText = document.getElementById('progress-text');
+  progressBox.style.display = 'block';
+
+  const uploadedPhotos = [];
+  for (let i=0; i<pendingPhotos.length; i++) {
+    const p = pendingPhotos[i];
+    progressText.textContent = `Uploading photo ${i+1} of ${pendingPhotos.length}...`;
+    progressBar.style.width = ((i/pendingPhotos.length)*100)+'%';
+    try {
+      const fd = new FormData();
+      fd.append('file', p.file);
+      fd.append('upload_preset', uploadPreset);
+      fd.append('folder', `skmy/${outlet.replace(/\s+/g,'_')}/${date}`);
+      const res = await fetch(`https://api.cloudinary.com/v1_1/${cloudName}/image/upload`, {method:'POST',body:fd});
+      const data = await res.json();
+      uploadedPhotos.push({url: data.secure_url, publicId: data.public_id, brands: p.brands});
+    } catch(e) {
+      showToast('Upload failed for '+p.name,'err');
+    }
+  }
+
+  progressBar.style.width = '100%';
+  progressText.textContent = 'Saving to database...';
+
+  const allBrands = [...new Set(uploadedPhotos.flatMap(p=>p.brands))];
+
+  try {
+    const result = await sbInsert('records', {
+      outlet, date, merch, type: selectedType, notes,
+      project_id: projectId||null,
+      brands: allBrands,
+      photos: uploadedPhotos
+    });
+    records.unshift(result[0]);
+  } catch(e) {
+    showToast('Failed to save record','err');
+  }
+
+  progressBox.style.display = 'none';
+  btn.disabled = false;
+  btn.textContent = '✅ Submit Record';
+  resetUploadForm();
+  showToast('✅ Submitted! '+uploadedPhotos.length+' photos uploaded');
+}
+
+function resetUploadForm() {
+  document.getElementById('outlet').value='';
+  document.getElementById('visit-date').value=new Date().toISOString().split('T')[0];
+  document.getElementById('merch-name').value='';
+  document.getElementById('notes').value='';
+  document.getElementById('project-field').style.display='none';
+  document.getElementById('project-select').value='';
+  document.querySelectorAll('.type-card').forEach(b=>b.classList.remove('selected'));
+  selectedType='';
+  pendingPhotos=[];
+  renderPhotoTagger();
+}
+
+// ============ RECORDS ============
+async function renderStats() {
+  document.getElementById('stats-row').innerHTML = `
+    <div class="stat-card"><div class="stat-num">...</div><div class="stat-label">Total Records</div></div>
+    <div class="stat-card"><div class="stat-num">...</div><div class="stat-label">Outlets</div></div>
+    <div class="stat-card"><div class="stat-num">...</div><div class="stat-label">This Month</div></div>
+    <div class="stat-card"><div class="stat-num">...</div><div class="stat-label">Total Photos</div></div>`;
+  try {
+    const data = await sbGet('records');
+    records = data;
+    const total = records.length;
+    const outletCount = new Set(records.map(r=>r.outlet)).size;
+    const thisMonth = records.filter(r=>r.date&&r.date.startsWith(new Date().toISOString().slice(0,7))).length;
+    const photos = records.reduce((s,r)=>s+(r.photos||[]).length,0);
+    document.getElementById('stats-row').innerHTML = `
+      <div class="stat-card"><div class="stat-num">${total}</div><div class="stat-label">Total Records</div></div>
+      <div class="stat-card"><div class="stat-num">${outletCount}</div><div class="stat-label">Outlets</div></div>
+      <div class="stat-card"><div class="stat-num">${thisMonth}</div><div class="stat-label">This Month</div></div>
+      <div class="stat-card"><div class="stat-num">${photos}</div><div class="stat-label">Total Photos</div></div>`;
+  } catch(e) { showToast('Failed to load records','err'); }
+}
+
+function getFilteredRecords() {
+  const brand = document.getElementById('f-brand').value;
+  const outlet = document.getElementById('f-outlet').value;
+  const type = document.getElementById('f-type').value;
+  const from = document.getElementById('f-date-from').value;
+  const to = document.getElementById('f-date-to').value;
+  const q = document.getElementById('f-search').value.toLowerCase();
+  return records.filter(r=>
+    (!brand || r.brands.includes(brand)) &&
+    (!outlet || r.outlet===outlet) &&
+    (!type || r.type===type) &&
+    (!from || r.date>=from) &&
+    (!to || r.date<=to) &&
+    (!q || r.outlet.toLowerCase().includes(q)||(r.brands||[]).join(' ').toLowerCase().includes(q)||(r.notes||'').toLowerCase().includes(q)||(r.merch||'').toLowerCase().includes(q))
+  );
+}
+
+function clearFilters() {
+  ['f-brand','f-outlet','f-type'].forEach(id=>document.getElementById(id).value='');
+  ['f-date-from','f-date-to','f-search'].forEach(id=>document.getElementById(id).value='');
+  renderRecords();
+}
+
+function renderRecords() {
+  const filtered = getFilteredRecords();
+  const list = document.getElementById('records-list');
+  if (!filtered.length) { list.innerHTML=`<div class="empty"><div class="empty-icon">📂</div><p>No records found</p></div>`; return; }
+
+  const typeBadge = {'Routine Visit':'badge-purple','POSM Installation':'badge-orange','Shelf Arrangement':'badge-green','New Display':'badge-orange','Promotion':'badge-green','Project':'badge-red'};
+
+  list.innerHTML = filtered.map(r=>{
+    const proj = r.projectId ? projects.find(p=>p.id==r.projectId) : null;
+    const cc = r.type==='POSM Installation'?'posm':r.type==='Project'?'project':'';
+    const photoGrid = r.photos.slice(0,8).map((p,i)=>`
+      <div class="record-photo-item" onclick="openLightbox('${p.url}','${r.outlet} · ${r.date}')">
+        <img src="${p.url}" loading="lazy">
+        ${p.brands&&p.brands.length?`<div class="photo-brand-badges">${p.brands.map(b=>`<span class="photo-mini-badge">${b}</span>`).join('')}</div>`:''}
+        ${i===7&&r.photos.length>8?`<div class="more-overlay">+${r.photos.length-8}</div>`:''}
+      </div>`).join('');
+    return `<div class="record-card ${cc}">
+      <div class="record-top">
+        <span class="record-outlet">${r.outlet}</span>
+        <span class="badge ${typeBadge[r.type]||'badge-purple'}">${r.type}</span>
+        ${proj?`<span class="badge badge-green">📌 ${proj.name}</span>`:''}
+      </div>
+      <div class="record-sub">🏷️ ${(r.brands||[]).join(', ')||'—'}${r.merch?' · 👤 '+r.merch:''}</div>
+      <div class="record-meta"><span>📅 ${r.date}</span><span>🖼️ ${r.photos.length} photo${r.photos.length>1?'s':''}</span></div>
+      ${r.notes?`<div class="record-notes">${r.notes}</div>`:''}
+      <div class="record-photo-grid">${photoGrid}</div>
+      <div class="record-actions">
+        <button class="btn btn-sm btn-danger" onclick="deleteRecord(${r.id})">Delete</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function deleteRecord(id) {
+  if (!confirm('Delete this record?')) return;
+  await sbDelete('records', id);
+  records = records.filter(r=>r.id!==id);
+  renderStats(); renderRecords();
+}
+
+// ============ PROJECTS ============
+async function renderProjects() {
+  try { projects = await sbGet('projects'); } catch(e) {}
+  const list = document.getElementById('projects-list');
+  if (!projects.length) { list.innerHTML=`<div class="empty"><div class="empty-icon">📌</div><p>No projects yet</p></div>`; return; }
+  list.innerHTML = projects.map(p=>{
+    const recs = records.filter(r=>r.projectId==p.id);
+    const photos = recs.reduce((s,r)=>s+r.photos.length,0);
+    const outletCount = new Set(recs.map(r=>r.outlet)).size;
+    const sc = {Active:'badge-green','On Hold':'badge-orange',Completed:'badge-purple'}[p.status]||'badge-green';
+    return `<div class="card">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;margin-bottom:8px">
+        <div>
+          <div style="font-size:15px;font-weight:600">${p.name}</div>
+          <div style="font-size:12px;color:var(--muted)">${p.type}${p.brand?' · '+p.brand:''}</div>
+        </div>
+        <div style="display:flex;gap:5px;align-items:center;flex-shrink:0">
+          <span class="badge ${sc}">${p.status||'Active'}</span>
+          <button class="btn btn-sm btn-outline" onclick="openProjectModal(${p.id})">✏️</button>
+          <button class="btn btn-sm btn-danger" onclick="deleteProject(${p.id})">🗑</button>
+        </div>
+      </div>
+      ${p.description?`<div style="font-size:12px;color:var(--muted);margin-bottom:8px">${p.description}</div>`:''}
+      <div style="display:flex;gap:14px;flex-wrap:wrap;font-size:12px;color:var(--muted)">
+        <span>📅 ${p.start_date||'—'}${p.end_date?' → '+p.end_date:''}</span>
+        <span>📂 <strong style="color:var(--text)">${recs.length}</strong> records</span>
+        <span>🖼️ <strong style="color:var(--text)">${photos}</strong> photos</span>
+        <span>🏪 <strong style="color:var(--text)">${outletCount}</strong> outlets</span>
+      </div>
+      <div style="margin-top:10px;display:flex;gap:7px;align-items:center;flex-wrap:wrap">
+        <select style="width:auto;font-size:12px;padding:5px 9px" onchange="updateProjectStatus(${p.id},this.value)">
+          <option ${(p.status||'Active')==='Active'?'selected':''}>Active</option>
+          <option ${p.status==='On Hold'?'selected':''}>On Hold</option>
+          <option ${p.status==='Completed'?'selected':''}>Completed</option>
+        </select>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function openProjectModal(id=null) {
+  editingProjectId = id;
+  document.getElementById('proj-brand').innerHTML = '<option value="">All / General</option>'+brands.map(b=>`<option>${b}</option>`).join('');
+  if (id) {
+    const p = projects.find(x=>x.id===id);
+    document.getElementById('proj-modal-title').textContent='Edit Project';
+    document.getElementById('proj-name').value=p.name;
+    document.getElementById('proj-brand').value=p.brand||'';
+    document.getElementById('proj-type').value=p.type;
+    document.getElementById('proj-start').value=p.start_date||'';
+    document.getElementById('proj-end').value=p.end_date||'';
+    document.getElementById('proj-desc').value=p.description||'';
+  } else {
+    document.getElementById('proj-modal-title').textContent='New Project';
+    ['proj-name','proj-desc','proj-end'].forEach(id=>document.getElementById(id).value='');
+    document.getElementById('proj-start').value=new Date().toISOString().split('T')[0];
+  }
+  document.getElementById('project-modal').classList.add('show');
+}
+
+async function saveProject() {
+  const name = document.getElementById('proj-name').value.trim();
+  if (!name) return showToast('Project name required','err');
+  const data = {name,brand:document.getElementById('proj-brand').value,type:document.getElementById('proj-type').value,start_date:document.getElementById('proj-start').value,end_date:document.getElementById('proj-end').value,description:document.getElementById('proj-desc').value.trim(),status:'Active'};
+  try {
+    if (editingProjectId) { await sbUpdate('projects', editingProjectId, data); }
+    else { await sbInsert('projects', data); }
+    closeModal('project-modal'); renderProjects(); populateAllSelects();
+    showToast(editingProjectId?'Project updated':'Project created');
+  } catch(e) { showToast('Failed to save project','err'); }
+}
+async function deleteProject(id) { if(!confirm('Delete project?'))return; await sbDelete('projects',id); renderProjects(); }
+async function updateProjectStatus(id,status) { await sbUpdate('projects',id,{status}); }
+
+// ============ REPORT ============
+async function renderReport() {
+  document.getElementById('report-content').innerHTML='<div class="empty"><div class="empty-icon">⏳</div><p>Loading...</p></div>';
+  try { records = await sbGet('records'); } catch(e) {}
+  const days = document.getElementById('report-period').value;
+  const filterBrand = document.getElementById('report-brand').value;
+  let filtered = records;
+  if (days!=='all') { const c=new Date(); c.setDate(c.getDate()-parseInt(days)); filtered=records.filter(r=>new Date(r.date)>=c); }
+  if (filterBrand) filtered=filtered.filter(r=>(r.brands||[]).includes(filterBrand));
+
+  const brandMap={};
+  filtered.forEach(r=>{
+    (r.brands||[]).forEach(b=>{
+      if(!brandMap[b]) brandMap[b]={visits:0,photos:0,outlets:new Set(),types:{}};
+      brandMap[b].visits++;
+      brandMap[b].photos+=r.photos.filter(p=>p.brands&&p.brands.includes(b)).length||r.photos.length;
+      brandMap[b].outlets.add(r.outlet);
+      brandMap[b].types[r.type]=(brandMap[b].types[r.type]||0)+1;
+    });
+  });
+
+  const sorted = Object.entries(brandMap).sort((a,b)=>b[1].visits-a[1].visits);
+  const max = sorted[0]?.[1].visits||1;
+  if (!sorted.length) { document.getElementById('report-content').innerHTML=`<div class="empty"><div class="empty-icon">📊</div><p>No data</p></div>`; return; }
+
+  document.getElementById('report-content').innerHTML=`<div class="brand-report">${sorted.map(([brand,d])=>`
+    <div class="brand-row">
+      <div class="brand-row-top">
+        <div class="brand-name">${brand}</div>
+        <div class="brand-stats">
+          <div class="brand-stat"><div class="brand-stat-num">${d.visits}</div><div class="brand-stat-lbl">Visits</div></div>
+          <div class="brand-stat"><div class="brand-stat-num">${d.photos}</div><div class="brand-stat-lbl">Photos</div></div>
+          <div class="brand-stat"><div class="brand-stat-num">${d.outlets.size}</div><div class="brand-stat-lbl">Outlets</div></div>
+        </div>
+      </div>
+      <div class="prog-bar"><div class="prog-fill" style="width:${(d.visits/max*100).toFixed(0)}%"></div></div>
+      <div class="brand-outlets">${[...d.outlets].join(' · ')}</div>
+      <div style="margin-top:4px;font-size:11px;color:var(--muted)">${Object.entries(d.types).map(([t,n])=>`${t}: ${n}`).join(' · ')}</div>
+    </div>`).join('')}</div>`;
+}
+
+function exportCSV() {
+  const rows=[['Date','Outlet','Brands','Type','Merchandizer','Photo URL','Photo Brands','Remarks']];
+  records.forEach(r=>r.photos.forEach(p=>rows.push([r.date,r.outlet,(r.brands||[]).join(';'),r.type,r.merch||'',p.url,(p.brands||[]).join(';'),r.notes||''])));
+  const csv=rows.map(r=>r.map(c=>`"${c}"`).join(',')).join('\n');
+  const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`SKMY_${new Date().toISOString().slice(0,10)}.csv`; a.click();
+}
+
+// ============ SHARE ============
+function openShareModal() {
+  document.getElementById('share-brand').innerHTML='<option value="">All Brands</option>'+brands.map(b=>`<option>${b}</option>`).join('');
+  const usedOutlets=[...new Set(records.map(r=>r.outlet))].sort();
+  document.getElementById('share-outlet').innerHTML='<option value="">All Outlets</option>'+usedOutlets.map(o=>`<option>${o}</option>`).join('');
+  document.getElementById('share-link-box').style.display='none';
+  document.getElementById('share-modal').classList.add('show');
+}
+
+function generateShareLink() {
+  const brand = document.getElementById('share-brand').value;
+  const outlet = document.getElementById('share-outlet').value;
+  const from = document.getElementById('share-from').value;
+  const to = document.getElementById('share-to').value;
+  const params = new URLSearchParams();
+  params.set('share','1');
+  if(brand) params.set('brand',brand);
+  if(outlet) params.set('outlet',outlet);
+  if(from) params.set('from',from);
+  if(to) params.set('to',to);
+  const base = window.location.href.split('?')[0];
+  const link = base+'?'+params.toString();
+  document.getElementById('share-link-text').textContent=link;
+  document.getElementById('share-link-box').style.display='block';
+}
+
+function copyShareLink() {
+  const text = document.getElementById('share-link-text').textContent;
+  navigator.clipboard.writeText(text).then(()=>showToast('Link copied!')).catch(()=>{
+    const el=document.getElementById('share-link-text');
+    const range=document.createRange(); range.selectNode(el);
+    window.getSelection().removeAllRanges(); window.getSelection().addRange(range);
+    document.execCommand('copy'); showToast('Link copied!');
+  });
+}
+
+function openShareView() {
+  const link = document.getElementById('share-link-text').textContent;
+  window.open(link,'_blank');
+}
+
+// ============ SHARE VIEW (public page) ============
+async function initShareView(params) {
+  document.getElementById('main-nav').style.display='none';
+  document.querySelectorAll('.page').forEach(p=>p.style.display='none');
+  document.getElementById('share-view').style.display='block';
+
+  const brand = params.get('brand')||'';
+  const outlet = params.get('outlet')||'';
+  const from = params.get('from')||'';
+  const to = params.get('to')||'';
+
+  const parts = [];
+  if(brand) parts.push(brand);
+  if(outlet) parts.push(outlet);
+  if(from||to) parts.push((from||'')+(to?' → '+to:''));
+  document.getElementById('share-view-sub').textContent = (parts.join(' · ')||'All records') + ' — Loading...';
+
+  // Load from Supabase
+  let shareRecords = [];
+  try {
+    shareRecords = await sbSearch('records', {outlet:outlet||undefined, type:undefined}, from, to, brand);
+  } catch(e) {}
+
+  const allBrands=[...new Set(shareRecords.flatMap(r=>r.brands||[]))].sort();
+  const allOutlets=[...new Set(shareRecords.map(r=>r.outlet))].sort();
+  document.getElementById('sv-brand').innerHTML='<option value="">All Brands</option>'+allBrands.map(b=>`<option>${b}</option>`).join('');
+  document.getElementById('sv-outlet').innerHTML='<option value="">All Outlets</option>'+allOutlets.map(o=>`<option>${o}</option>`).join('');
+  if(brand) document.getElementById('sv-brand').value=brand;
+  if(outlet) document.getElementById('sv-outlet').value=outlet;
+
+  document.getElementById('share-view-sub').textContent = parts.join(' · ')||'All records';
+  window._shareRecords = shareRecords;
+  renderShareView();
+}
+
+function renderShareView() {
+  const brand = document.getElementById('sv-brand').value;
+  const outlet = document.getElementById('sv-outlet').value;
+  let filtered = (window._shareRecords||[]);
+  if(brand) filtered=filtered.filter(r=>(r.brands||[]).includes(brand));
+  if(outlet) filtered=filtered.filter(r=>r.outlet===outlet);
+
+  // Flatten to individual photos with context
+  const photos = [];
+  filtered.forEach(r=>{
+    r.photos.forEach(p=>{
+      if(!brand||(p.brands&&p.brands.includes(brand))||(!p.brands||!p.brands.length)) {
+        photos.push({url:p.url, photoBrands:p.brands||[], outlet:r.outlet, date:r.date, type:r.type, recordBrands:r.brands||[]});
+      }
+    });
+  });
+
+  const grid = document.getElementById('share-grid');
+  if(!photos.length){grid.innerHTML='<div class="empty" style="grid-column:1/-1"><div class="empty-icon">📷</div><p>No photos found</p></div>';return;}
+  window._visiblePhotos = photos;
+  grid.innerHTML = photos.map(p=>`
+    <div class="share-card">
+      <img class="share-card-img" src="${p.url}" loading="lazy" onclick="openLightbox('${p.url}','${p.outlet} · ${p.date}')">
+      <div class="share-card-info">
+        <div class="share-card-outlet">${p.outlet}</div>
+        <div class="share-card-meta">📅 ${p.date} · ${p.type}</div>
+        <div class="share-card-brands">${(p.photoBrands.length?p.photoBrands:p.recordBrands).map(b=>`<span class="badge badge-purple" style="font-size:10px">${b}</span>`).join('')}</div>
+        <a href="${p.url}" download target="_blank" style="display:inline-block;margin-top:6px;font-size:11px;color:var(--accent);text-decoration:none">📥 Download</a>
+      </div>
+    </div>`).join('');
+}
+
+async function downloadAllVisible() {
+  const photos = window._visiblePhotos||[];
+  if(!photos.length) return showToast('No photos to download','err');
+  showToast('Downloading '+photos.length+' photos...');
+  for(let i=0;i<photos.length;i++) {
+    const p=photos[i];
+    const a=document.createElement('a'); a.href=p.url; a.download=`photo_${i+1}.jpg`; a.target='_blank'; a.click();
+    await new Promise(r=>setTimeout(r,300));
+  }
+}
+
+// ============ SETTINGS ============
+function renderSettings() {
+  document.getElementById('outlets-list').innerHTML=outlets.map((o,i)=>`
+    <div class="settings-item">
+      <div><div class="settings-item-name">${o.name}</div><div style="font-size:11px;color:var(--muted)">${o.chain}</div></div>
+      <button class="btn btn-sm btn-danger" onclick="removeOutlet(${i})">Remove</button>
+    </div>`).join('');
+  document.getElementById('brands-list').innerHTML=brands.map((b,i)=>`
+    <div class="settings-item">
+      <div class="settings-item-name">${b}</div>
+      <button class="btn btn-sm btn-danger" onclick="removeBrand(${i})">Remove</button>
+    </div>`).join('');
+  document.getElementById('merch-list').innerHTML=merchs.map((m,i)=>`
+    <div class="settings-item">
+      <div class="settings-item-name">${m}</div>
+      <button class="btn btn-sm btn-danger" onclick="removeMerch(${i})">Remove</button>
+    </div>`).join('');
+}
+
+function addOutlet(){const chain=document.getElementById('new-outlet-chain').value.trim(),name=document.getElementById('new-outlet-name').value.trim();if(!name)return showToast('Enter outlet name','err');outlets.push({chain:chain||'Other',name});document.getElementById('new-outlet-chain').value='';document.getElementById('new-outlet-name').value='';save();renderSettings();populateAllSelects();showToast('Outlet added');}
+function removeOutlet(i){outlets.splice(i,1);save();renderSettings();populateAllSelects();}
+function addBrand(){const b=document.getElementById('new-brand').value.trim();if(!b)return showToast('Enter brand name','err');if(brands.includes(b))return showToast('Already exists','err');brands.push(b);document.getElementById('new-brand').value='';save();renderSettings();populateAllSelects();showToast('Brand added');}
+function removeBrand(i){brands.splice(i,1);save();renderSettings();populateAllSelects();}
+function addMerch(){const m=document.getElementById('new-merch').value.trim();if(!m)return showToast('Enter name','err');merchs.push(m);document.getElementById('new-merch').value='';save();renderSettings();populateAllSelects();showToast('Team member added');}
+function removeMerch(i){merchs.splice(i,1);save();renderSettings();populateAllSelects();}
+function saveConfig(){cloudName=document.getElementById('cfg-cloud').value.trim();uploadPreset=document.getElementById('cfg-preset').value.trim();localStorage.setItem('skmy_cloud',cloudName);localStorage.setItem('skmy_preset',uploadPreset);showToast('Config saved');}
+async function clearAllData(){
+  if(!confirm('Delete ALL records? This cannot be undone.'))return;
+  // Delete all records from supabase
+  await fetch(`${SUPABASE_URL}/rest/v1/records?id=gt.0`,{method:'DELETE',headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}});
+  records=[]; renderStats(); showToast('All records cleared');
+}
+
+// ============ LIGHTBOX ============
+function openLightbox(src,caption=''){document.getElementById('lightbox-img').src=src;document.getElementById('lightbox-caption').textContent=caption;document.getElementById('lightbox').classList.add('show');}
+function closeLightbox(){document.getElementById('lightbox').classList.remove('show');}
+function closeLightboxClick(e){if(e.target===document.getElementById('lightbox'))closeLightbox();}
+
+// ============ MODAL ============
+function closeModal(id){document.getElementById(id).classList.remove('show');}
+
+// ============ SAVE ============
+function save(){
+  localStorage.setItem('skmy_outlets',JSON.stringify(outlets));
+  localStorage.setItem('skmy_brands',JSON.stringify(brands));
+  localStorage.setItem('skmy_merchs',JSON.stringify(merchs));
+}
+
+// ============ TOAST ============
+function showToast(msg,type=''){const t=document.getElementById('toast');t.textContent=msg;t.className='toast show'+(type==='err'?' error':'');setTimeout(()=>t.className='toast',2800);}
+</script>
+</body>
+</html>
