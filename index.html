@@ -198,20 +198,28 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
 
   <div class="card">
     <div class="card-title">Outlet Info</div>
-    <div class="field"><label>Outlet *</label><select id="outlet"></select></div>
+    <div class="field">
+      <label>Outlet *</label>
+      <div style="position:relative">
+        <input type="text" id="outlet-search" placeholder="🔍 Search outlet..." autocomplete="off" oninput="filterOutlets(this.value)" onfocus="showOutletDropdown()" style="width:100%">
+        <div id="outlet-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--surface);border:1px solid var(--accent);border-radius:0 0 8px 8px;max-height:220px;overflow-y:auto;z-index:50">
+        </div>
+      </div>
+      <input type="hidden" id="outlet">
+    </div>
     <div class="field"><label>Visit Date *</label><input type="date" id="visit-date"></div>
     <div class="field"><label>Merchandizer</label><select id="merch-name"><option value="">Select...</option></select></div>
   </div>
 
   <div class="card">
-    <div class="card-title">Visit Type *</div>
+    <div class="card-title">Visit Type * <span style="font-size:10px;color:var(--muted);font-weight:400;letter-spacing:0">(select all that apply)</span></div>
     <div class="type-grid" id="type-grid">
-      <button class="type-card" onclick="selectType('Routine Visit',this)">🔄 Routine Visit</button>
-      <button class="type-card" onclick="selectType('POSM Installation',this)">📌 POSM Installation</button>
-      <button class="type-card" onclick="selectType('Shelf Arrangement',this)">📦 Shelf Arrangement</button>
-      <button class="type-card" onclick="selectType('New Display',this)">✨ New Display</button>
-      <button class="type-card" onclick="selectType('Promotion',this)">🎯 Promotion</button>
-      <button class="type-card" onclick="selectType('Project',this)">🗂️ Project</button>
+      <button class="type-card" onclick="toggleType('Routine Visit',this)">🔄 Routine Visit</button>
+      <button class="type-card" onclick="toggleType('POSM Installation',this)">📌 POSM Installation</button>
+      <button class="type-card" onclick="toggleType('Shelf Arrangement',this)">📦 Shelf Arrangement</button>
+      <button class="type-card" onclick="toggleType('New Display',this)">✨ New Display</button>
+      <button class="type-card" onclick="toggleType('Promotion',this)">🎯 Promotion</button>
+      <button class="type-card" onclick="toggleType('Project',this)">🗂️ Project</button>
     </div>
     <div class="field" id="project-field" style="display:none;margin-top:10px">
       <label>Link to Project</label>
@@ -300,7 +308,14 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
   <div class="card">
     <div class="card-title">Outlets</div>
     <div class="add-row">
-      <input type="text" id="new-outlet-chain" placeholder="Chain" style="flex:0.5">
+      <select id="new-outlet-chain" style="flex:0.5;padding:10px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--font);font-size:13px;-webkit-appearance:none">
+        <option value="Watson">Watson</option>
+        <option value="Watson Pink">Watson Pink</option>
+        <option value="Guardian">Guardian</option>
+        <option value="Sasa">Sasa</option>
+        <option value="Sephora">Sephora</option>
+        <option value="Other">Other</option>
+      </select>
       <input type="text" id="new-outlet-name" placeholder="Outlet name">
       <button class="btn btn-success btn-sm" onclick="addOutlet()">Add</button>
     </div>
@@ -452,6 +467,41 @@ async function sbSearch(table, filters={}, dateFrom='', dateTo='', brandFilter='
   if (brandFilter) url += `&brands=cs.{"${brandFilter}"}`;
   const res = await fetch(url, {headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}});
   return res.json();
+}
+
+// Settings via Supabase
+async function loadSettings() {
+  try {
+    const [ob, bb, mb] = await Promise.all([
+      sbGet('settings_outlets'),
+      sbGet('settings_brands'),
+      sbGet('settings_merchs')
+    ]);
+    if (ob && ob.length) outlets = ob.map(r=>({chain:r.chain, name:r.name, id:r.id}));
+    else outlets = JSON.parse(localStorage.getItem('skmy_outlets')||JSON.stringify(DEFAULT_OUTLETS));
+    if (bb && bb.length) brands = bb.map(r=>r.name);
+    else brands = JSON.parse(localStorage.getItem('skmy_brands')||JSON.stringify(DEFAULT_BRANDS));
+    if (mb && mb.length) merchs = mb.map(r=>r.name);
+    else merchs = JSON.parse(localStorage.getItem('skmy_merchs')||JSON.stringify(DEFAULT_MERCH));
+  } catch(e) {
+    outlets = JSON.parse(localStorage.getItem('skmy_outlets')||JSON.stringify(DEFAULT_OUTLETS));
+    brands = JSON.parse(localStorage.getItem('skmy_brands')||JSON.stringify(DEFAULT_BRANDS));
+    merchs = JSON.parse(localStorage.getItem('skmy_merchs')||JSON.stringify(DEFAULT_MERCH));
+  }
+}
+
+async function sbAddSetting(table, data) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+    method:'POST', headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json','Prefer':'return=representation'},
+    body: JSON.stringify(data)
+  });
+  return res.json();
+}
+
+async function sbDeleteSetting(table, id) {
+  await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${id}`, {
+    method:'DELETE', headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}
+  });
 }
 
 // ============ DEFAULT DATA ============
@@ -1358,7 +1408,7 @@ let cloudName = CLOUDINARY_CLOUD;
 let uploadPreset = CLOUDINARY_PRESET;
 
 let pendingPhotos = []; // {dataUrl, file, name, brands:[]}
-let selectedType = '';
+let selectedTypes = []; // multi-select
 let editingProjectId = null;
 let shareParams = {};
 
@@ -1370,12 +1420,15 @@ document.getElementById('cfg-preset').value = uploadPreset;
 
 // Check if share view
 const urlParams = new URLSearchParams(window.location.search);
-if (urlParams.has('share')) {
-  initShareView(urlParams);
-} else {
-  populateAllSelects();
-  renderSettings();
-}
+(async () => {
+  await loadSettings();
+  buildOutletIndex();
+  if (urlParams.has('share')) {
+    initShareView(urlParams);
+  } else {
+    await populateAllSelects();
+  }
+})();
 
 // ============ PAGES ============
 function showPage(p, el) {
@@ -1390,17 +1443,59 @@ function showPage(p, el) {
 }
 
 // ============ SELECTS ============
-async function populateAllSelects() {
-  // Outlet
-  const oSel = document.getElementById('outlet');
-  const groups = {};
-  outlets.forEach(o=>{if(!groups[o.chain])groups[o.chain]=[];groups[o.chain].push(o.name);});
-  oSel.innerHTML = '<option value="">Select outlet...</option>';
-  Object.entries(groups).sort().forEach(([chain,names])=>{
-    const g = document.createElement('optgroup'); g.label = chain;
-    names.sort().forEach(n=>{const op=document.createElement('option');op.value=n;op.textContent=n;g.appendChild(op);});
-    oSel.appendChild(g);
+function buildOutletIndex() {
+  // Build searchable outlet list
+  window._outletList = outlets.slice().sort((a,b)=>{
+    if(a.chain!==b.chain) return a.chain.localeCompare(b.chain);
+    return a.name.localeCompare(b.name);
   });
+}
+
+function showOutletDropdown() {
+  filterOutlets(document.getElementById('outlet-search').value);
+  document.getElementById('outlet-dropdown').style.display='block';
+  document.addEventListener('click', hideOutletDropdown, {once:true, capture:true});
+}
+
+function hideOutletDropdown(e) {
+  const dd = document.getElementById('outlet-dropdown');
+  const inp = document.getElementById('outlet-search');
+  if (dd && !dd.contains(e.target) && e.target!==inp) {
+    dd.style.display='none';
+  }
+}
+
+function filterOutlets(q) {
+  const dd = document.getElementById('outlet-dropdown');
+  if (!window._outletList) buildOutletIndex();
+  const list = window._outletList;
+  const filtered = q.length<1 ? list : list.filter(o=>o.name.toLowerCase().includes(q.toLowerCase())||o.chain.toLowerCase().includes(q.toLowerCase()));
+  if (!filtered.length) { dd.innerHTML='<div style="padding:10px;color:var(--muted);font-size:13px">No outlets found</div>'; dd.style.display='block'; return; }
+  // Group by chain
+  const groups={};
+  filtered.forEach(o=>{if(!groups[o.chain])groups[o.chain]=[];groups[o.chain].push(o.name);});
+  dd.innerHTML = Object.entries(groups).sort().map(([chain,names])=>`
+    <div style="padding:6px 12px 2px;font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--accent);text-transform:uppercase;background:var(--surface2)">${chain}</div>
+    ${names.map(n=>`<div class="outlet-opt" onclick="selectOutlet('${n.replace(/'/g,"\'")}','${chain.replace(/'/g,"\'")}')" style="padding:9px 14px;font-size:13px;cursor:pointer;border-bottom:1px solid var(--border)">${n}</div>`).join('')}
+  `).join('');
+  dd.style.display='block';
+  dd.querySelectorAll('.outlet-opt').forEach(el=>{
+    el.addEventListener('mouseover',()=>el.style.background='var(--surface2)');
+    el.addEventListener('mouseout',()=>el.style.background='');
+  });
+}
+
+function selectOutlet(name, chain) {
+  document.getElementById('outlet').value = name;
+  document.getElementById('outlet-search').value = name;
+  document.getElementById('outlet-dropdown').style.display='none';
+}
+
+async function populateAllSelects() {
+  buildOutletIndex();
+  // Clear outlet search
+  const oSearch = document.getElementById('outlet-search');
+  if (oSearch) { oSearch.value=''; document.getElementById('outlet').value=''; }
   // Brand dropdown
   const bSel = document.getElementById('brand-select-hidden');
   // Merch
@@ -1414,27 +1509,30 @@ async function populateAllSelects() {
     pSel.innerHTML = '<option value="">No project</option>'+projects.filter(p=>p.status!=='Completed').map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
   } catch(e) { pSel.innerHTML = '<option value="">No project</option>'; }
   // Proj brand modal
-  document.getElementById('proj-brand').innerHTML = '<option value="">All / General</option>'+brands.map(b=>`<option>${b}</option>`).join('');
+  const _bn = brands.map(b=>typeof b==='object'?b.name:b);
+  document.getElementById('proj-brand').innerHTML = '<option value="">All / General</option>'+_bn.map(b=>`<option>${b}</option>`).join('');
   // Update photo taggers
   renderPhotoTagger();
 }
 
 function populateFilterSelects() {
-  document.getElementById('f-brand').innerHTML = '<option value="">All Brands</option>'+brands.map(b=>`<option>${b}</option>`).join('');
+  const brandNames = brands.map(b=>typeof b==='object'?b.name:b);
+  document.getElementById('f-brand').innerHTML = '<option value="">All Brands</option>'+brandNames.map(b=>`<option>${b}</option>`).join('');
   const usedOutlets = [...new Set(records.map(r=>r.outlet))].sort();
   document.getElementById('f-outlet').innerHTML = '<option value="">All Outlets</option>'+usedOutlets.map(o=>`<option>${o}</option>`).join('');
 }
 
 function populateReportSelects() {
-  document.getElementById('report-brand').innerHTML = '<option value="">All Brands</option>'+brands.map(b=>`<option>${b}</option>`).join('');
+  const brandNames = brands.map(b=>typeof b==='object'?b.name:b);
+  document.getElementById('report-brand').innerHTML = '<option value="">All Brands</option>'+brandNames.map(b=>`<option>${b}</option>`).join('');
 }
 
 // ============ TYPE ============
-function selectType(t,el) {
-  selectedType = t;
-  document.querySelectorAll('.type-card').forEach(b=>b.classList.remove('selected'));
-  el.classList.add('selected');
-  document.getElementById('project-field').style.display = t==='Project'?'block':'none';
+function toggleType(t, el) {
+  const idx = selectedTypes.indexOf(t);
+  if (idx === -1) { selectedTypes.push(t); el.classList.add('selected'); }
+  else { selectedTypes.splice(idx,1); el.classList.remove('selected'); }
+  document.getElementById('project-field').style.display = selectedTypes.includes('Project')?'block':'none';
 }
 
 // ============ PHOTOS & TAGGING ============
@@ -1458,7 +1556,7 @@ function renderPhotoTagger() {
       <div class="photo-tag-info">
         <div class="photo-tag-name">${p.name}</div>
         <div class="photo-tag-brands">
-          ${brands.map(b=>`<button class="photo-brand-chip ${p.brands.includes(b)?'selected':''}" onclick="togglePhotoBrand(${i},'${b}')">${b}</button>`).join('')}
+          ${brands.map(b=>{const bn=typeof b==='object'?b.name:b;return `<button class="photo-brand-chip ${p.brands.includes(bn)?'selected':''}" onclick="togglePhotoBrand(${i},'${bn}')">${bn}</button>`;}).join('')}
         </div>
       </div>
       <button class="photo-remove" onclick="removePhoto(${i})">✕</button>
@@ -1482,7 +1580,7 @@ async function submitRecord() {
   const notes = document.getElementById('notes').value.trim();
   const projectId = document.getElementById('project-select').value;
 
-  if (!outlet||!date||!selectedType) return showToast('Please fill outlet, date & type','err');
+  if (!outlet||!date||!selectedTypes.length) return showToast('Please fill outlet, date & type','err');
   if (!pendingPhotos.length) return showToast('Please upload at least one photo','err');
 
   const btn = document.getElementById('submit-btn');
@@ -1519,7 +1617,7 @@ async function submitRecord() {
 
   try {
     const result = await sbInsert('records', {
-      outlet, date, merch, type: selectedType, notes,
+      outlet, date, merch, type: selectedTypes.join(', '), notes,
       project_id: projectId||null,
       brands: allBrands,
       photos: uploadedPhotos
@@ -1544,7 +1642,7 @@ function resetUploadForm() {
   document.getElementById('project-field').style.display='none';
   document.getElementById('project-select').value='';
   document.querySelectorAll('.type-card').forEach(b=>b.classList.remove('selected'));
-  selectedType='';
+  selectedTypes=[];
   pendingPhotos=[];
   renderPhotoTagger();
 }
@@ -1676,7 +1774,8 @@ async function renderProjects() {
 
 function openProjectModal(id=null) {
   editingProjectId = id;
-  document.getElementById('proj-brand').innerHTML = '<option value="">All / General</option>'+brands.map(b=>`<option>${b}</option>`).join('');
+  const _bn = brands.map(b=>typeof b==='object'?b.name:b);
+  document.getElementById('proj-brand').innerHTML = '<option value="">All / General</option>'+_bn.map(b=>`<option>${b}</option>`).join('');
   if (id) {
     const p = projects.find(x=>x.id===id);
     document.getElementById('proj-modal-title').textContent='Edit Project';
@@ -1759,7 +1858,8 @@ function exportCSV() {
 
 // ============ SHARE ============
 function openShareModal() {
-  document.getElementById('share-brand').innerHTML='<option value="">All Brands</option>'+brands.map(b=>`<option>${b}</option>`).join('');
+  const _sbn = brands.map(b=>typeof b==='object'?b.name:b);
+  document.getElementById('share-brand').innerHTML='<option value="">All Brands</option>'+_sbn.map(b=>`<option>${b}</option>`).join('');
   const usedOutlets=[...new Set(records.map(r=>r.outlet))].sort();
   document.getElementById('share-outlet').innerHTML='<option value="">All Outlets</option>'+usedOutlets.map(o=>`<option>${o}</option>`).join('');
   document.getElementById('share-link-box').style.display='none';
@@ -1877,30 +1977,72 @@ async function downloadAllVisible() {
 }
 
 // ============ SETTINGS ============
-function renderSettings() {
-  document.getElementById('outlets-list').innerHTML=outlets.map((o,i)=>`
+async function renderSettings() {
+  await reloadSettings();
+  document.getElementById('outlets-list').innerHTML=outlets.map((o)=>`
     <div class="settings-item">
       <div><div class="settings-item-name">${o.name}</div><div style="font-size:11px;color:var(--muted)">${o.chain}</div></div>
-      <button class="btn btn-sm btn-danger" onclick="removeOutlet(${i})">Remove</button>
+      <button class="btn btn-sm btn-danger" onclick="removeOutlet(${o.id})">Remove</button>
     </div>`).join('');
   document.getElementById('brands-list').innerHTML=brands.map((b,i)=>`
     <div class="settings-item">
-      <div class="settings-item-name">${b}</div>
-      <button class="btn btn-sm btn-danger" onclick="removeBrand(${i})">Remove</button>
+      <div class="settings-item-name">${typeof b==='object'?b.name:b}</div>
+      <button class="btn btn-sm btn-danger" onclick="removeBrand(${typeof b==='object'?b.id:i})">Remove</button>
     </div>`).join('');
   document.getElementById('merch-list').innerHTML=merchs.map((m,i)=>`
     <div class="settings-item">
-      <div class="settings-item-name">${m}</div>
-      <button class="btn btn-sm btn-danger" onclick="removeMerch(${i})">Remove</button>
+      <div class="settings-item-name">${typeof m==='object'?m.name:m}</div>
+      <button class="btn btn-sm btn-danger" onclick="removeMerch(${typeof m==='object'?m.id:i})">Remove</button>
     </div>`).join('');
 }
 
-function addOutlet(){const chain=document.getElementById('new-outlet-chain').value.trim(),name=document.getElementById('new-outlet-name').value.trim();if(!name)return showToast('Enter outlet name','err');outlets.push({chain:chain||'Other',name});document.getElementById('new-outlet-chain').value='';document.getElementById('new-outlet-name').value='';save();renderSettings();populateAllSelects();showToast('Outlet added');}
-function removeOutlet(i){outlets.splice(i,1);save();renderSettings();populateAllSelects();}
-function addBrand(){const b=document.getElementById('new-brand').value.trim();if(!b)return showToast('Enter brand name','err');if(brands.includes(b))return showToast('Already exists','err');brands.push(b);document.getElementById('new-brand').value='';save();renderSettings();populateAllSelects();showToast('Brand added');}
-function removeBrand(i){brands.splice(i,1);save();renderSettings();populateAllSelects();}
-function addMerch(){const m=document.getElementById('new-merch').value.trim();if(!m)return showToast('Enter name','err');merchs.push(m);document.getElementById('new-merch').value='';save();renderSettings();populateAllSelects();showToast('Team member added');}
-function removeMerch(i){merchs.splice(i,1);save();renderSettings();populateAllSelects();}
+async function addOutlet(){
+  const chain=document.getElementById('new-outlet-chain').value.trim();
+  const name=document.getElementById('new-outlet-name').value.trim();
+  if(!name)return showToast('Enter outlet name','err');
+  try {
+    const res = await sbAddSetting('settings_outlets',{chain:chain||'Other',name});
+    outlets.push({chain:chain||'Other',name,id:res[0]?.id});
+    document.getElementById('new-outlet-chain').value='';
+    document.getElementById('new-outlet-name').value='';
+    buildOutletIndex(); renderSettings(); populateAllSelects(); showToast('Outlet added');
+  } catch(e){ showToast('Failed to add outlet','err'); }
+}
+async function removeOutlet(id){
+  try { await sbDeleteSetting('settings_outlets',id); await reloadSettings(); buildOutletIndex(); renderSettings(); populateAllSelects(); }
+  catch(e){ showToast('Failed','err'); }
+}
+async function addBrand(){
+  const b=document.getElementById('new-brand').value.trim();
+  if(!b)return showToast('Enter brand name','err');
+  const names=brands.map(x=>typeof x==='object'?x.name:x);
+  if(names.includes(b))return showToast('Already exists','err');
+  try {
+    const res=await sbAddSetting('settings_brands',{name:b});
+    brands.push(b); document.getElementById('new-brand').value='';
+    renderSettings(); populateAllSelects(); showToast('Brand added');
+  } catch(e){ showToast('Failed','err'); }
+}
+async function removeBrand(id){
+  try { await sbDeleteSetting('settings_brands',id); await reloadSettings(); renderSettings(); populateAllSelects(); }
+  catch(e){ showToast('Failed','err'); }
+}
+async function addMerch(){
+  const m=document.getElementById('new-merch').value.trim();
+  if(!m)return showToast('Enter name','err');
+  try {
+    await sbAddSetting('settings_merchs',{name:m});
+    merchs.push(m); document.getElementById('new-merch').value='';
+    renderSettings(); populateAllSelects(); showToast('Team member added');
+  } catch(e){ showToast('Failed','err'); }
+}
+async function removeMerch(id){
+  try { await sbDeleteSetting('settings_merchs',id); await reloadSettings(); renderSettings(); populateAllSelects(); }
+  catch(e){ showToast('Failed','err'); }
+}
+async function reloadSettings(){
+  await loadSettings(); buildOutletIndex();
+}
 function saveConfig(){cloudName=document.getElementById('cfg-cloud').value.trim();uploadPreset=document.getElementById('cfg-preset').value.trim();localStorage.setItem('skmy_cloud',cloudName);localStorage.setItem('skmy_preset',uploadPreset);showToast('Config saved');}
 async function clearAllData(){
   if(!confirm('Delete ALL records? This cannot be undone.'))return;
