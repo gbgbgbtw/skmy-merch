@@ -216,12 +216,12 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
   <div class="card">
     <div class="card-title">Visit Type *</div>
     <div class="type-grid" id="type-grid">
-      <button class="type-card" onclick="selectType('Routine Visit',this)">🔄 Routine Visit</button>
-      <button class="type-card" onclick="selectType('POSM Installation',this)">📌 POSM Installation</button>
-      <button class="type-card" onclick="selectType('Shelf Arrangement',this)">📦 Shelf Arrangement</button>
-      <button class="type-card" onclick="selectType('New Display',this)">✨ New Display</button>
-      <button class="type-card" onclick="selectType('Promotion',this)">🎯 Promotion</button>
-      <button class="type-card" onclick="selectType('Project',this)">🗂️ Project</button>
+      <button class="type-card" onclick="toggleType('Routine Visit',this)">🔄 Routine Visit</button>
+      <button class="type-card" onclick="toggleType('POSM Installation',this)">📌 POSM Installation</button>
+      <button class="type-card" onclick="toggleType('Shelf Arrangement',this)">📦 Shelf Arrangement</button>
+      <button class="type-card" onclick="toggleType('New Display',this)">✨ New Display</button>
+      <button class="type-card" onclick="toggleType('Promotion',this)">🎯 Promotion</button>
+      <button class="type-card" onclick="toggleType('Project',this)">🗂️ Project</button>
     </div>
     <div class="field" id="project-field" style="display:none;margin-top:10px">
       <label>Link to Project</label>
@@ -299,6 +299,15 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
     <button class="btn btn-sm btn-outline" onclick="exportCSV()">📥 Export CSV</button>
     <button class="btn btn-sm btn-outline" onclick="generatePDF()" style="border-color:var(--danger);color:var(--danger)">📄 Export PDF</button>
     <button class="btn btn-sm btn-success" onclick="openShareModal()">🔗 Share Link</button>
+  </div>
+  <div style="margin-bottom:14px">
+    <div style="font-size:11px;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">📦 Stock Summary Date Range</div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
+      <input type="date" id="stock-sum-from" onchange="renderReport()" style="width:auto;flex:1;min-width:130px;font-size:12px;padding:7px 10px">
+      <span style="color:var(--muted);font-size:12px">to</span>
+      <input type="date" id="stock-sum-to" onchange="renderReport()" style="width:auto;flex:1;min-width:130px;font-size:12px;padding:7px 10px">
+      <button class="btn btn-sm btn-outline" onclick="clearStockSumDates()">Clear</button>
+    </div>
   </div>
   <div id="report-content"></div>
 
@@ -1449,7 +1458,7 @@ let cloudName = CLOUDINARY_CLOUD;
 let uploadPreset = CLOUDINARY_PRESET;
 
 let pendingPhotos = []; // {dataUrl, file, name, brands:[]}
-let selectedType = '';
+let selectedTypes = [];
 let editingProjectId = null;
 let shareParams = {};
 
@@ -1570,11 +1579,11 @@ function populateReportSelects() {
 }
 
 // ============ TYPE ============
-function selectType(t,el) {
-  selectedType = t;
-  document.querySelectorAll('.type-card').forEach(b=>b.classList.remove('selected'));
-  el.classList.add('selected');
-  document.getElementById('project-field').style.display = t==='Project'?'block':'none';
+function toggleType(t, el) {
+  const idx = selectedTypes.indexOf(t);
+  if (idx === -1) { selectedTypes.push(t); el.classList.add('selected'); }
+  else { selectedTypes.splice(idx,1); el.classList.remove('selected'); }
+  document.getElementById('project-field').style.display = selectedTypes.includes('Project')?'block':'none';
 }
 
 // ============ PHOTOS & TAGGING ============
@@ -1592,23 +1601,45 @@ function handleFiles(files) {
 function renderPhotoTagger() {
   const container = document.getElementById('photo-tagger');
   if (!pendingPhotos.length) { container.innerHTML=''; return; }
-  container.innerHTML = pendingPhotos.map((p,i)=>`
-    <div class="photo-tag-row">
-      <img class="photo-tag-thumb" src="${p.dataUrl}" onclick="openLightbox('${p.dataUrl}','')">
-      <div class="photo-tag-info">
-        <div class="photo-tag-name">${p.name}</div>
-        <div class="photo-tag-brands">
-          ${brands.map(b=>`<button class="photo-brand-chip ${p.brands.includes(b)?'selected':''}" onclick="togglePhotoBrand(${i},'${b}')">${b}</button>`).join('')}
-        </div>
-      </div>
-      <button class="photo-remove" onclick="removePhoto(${i})">✕</button>
-    </div>`).join('');
+  container.innerHTML = pendingPhotos.map((p,i)=>{
+    const allDP = DPROJECT_BRANDS.every(b=>p.brands.includes(b));
+    const brandChips = brands.map(b=>{
+      const bn = typeof b==='object'?b.name:b;
+      return '<button class="photo-brand-chip '+(p.brands.includes(bn)?'selected':'')+'" onclick="togglePhotoBrand('+i+',\''+bn+'\')" style="user-select:none;-webkit-user-select:none">'+bn+'</button>';
+    }).join('');
+    return '<div class="photo-tag-row">'+
+      '<img class="photo-tag-thumb" src="'+p.dataUrl+'" onclick="openLightbox(\''+p.dataUrl+'\',\'\')">'+
+      '<div class="photo-tag-info">'+
+        '<div class="photo-tag-name">'+p.name+'</div>'+
+        '<div class="photo-tag-brands">'+
+          '<button class="photo-brand-chip" style="border-color:var(--accent2);color:var(--accent2);font-weight:600;user-select:none;-webkit-user-select:none" onclick="toggleDProject('+i+')">'+(allDP?'✓ ':'⚡ ')+'dProject</button>'+
+          brandChips+
+        '</div>'+
+      '</div>'+
+      '<button class="photo-remove" onclick="removePhoto('+i+')">✕</button>'+
+    '</div>';
+  }).join('');
 }
+
+const DPROJECT_BRANDS = ['Dr.CPU','DERMABLOCK','SON&PARK ARTI','A.SOLUTION','Two Edit','Point','milktouch','DROP BE'];
 
 function togglePhotoBrand(photoIdx, brand) {
   const p = pendingPhotos[photoIdx];
   const i = p.brands.indexOf(brand);
   if (i===-1) p.brands.push(brand); else p.brands.splice(i,1);
+  renderPhotoTagger();
+}
+
+function toggleDProject(photoIdx) {
+  const p = pendingPhotos[photoIdx];
+  const allSelected = DPROJECT_BRANDS.every(b => p.brands.includes(b));
+  if (allSelected) {
+    // Deselect all dProject brands
+    p.brands = p.brands.filter(b => !DPROJECT_BRANDS.includes(b));
+  } else {
+    // Select all dProject brands
+    DPROJECT_BRANDS.forEach(b => { if (!p.brands.includes(b)) p.brands.push(b); });
+  }
   renderPhotoTagger();
 }
 
@@ -1622,7 +1653,7 @@ async function submitRecord() {
   const notes = document.getElementById('notes').value.trim();
   const projectId = document.getElementById('project-select').value;
 
-  if (!outlet||!date||!selectedType) return showToast('Please fill outlet, date & type','err');
+  if (!outlet||!date||!selectedTypes.length) return showToast('Please fill outlet, date & type','err');
   if (!pendingPhotos.length) return showToast('Please upload at least one photo','err');
 
   const btn = document.getElementById('submit-btn');
@@ -1659,7 +1690,7 @@ async function submitRecord() {
 
   try {
     const result = await sbInsert('records', {
-      outlet, date, merch, type: selectedType, notes,
+      outlet, date, merch, type: selectedTypes.join(', '), notes,
       project_id: projectId||null,
       brands: allBrands,
       photos: uploadedPhotos
@@ -1685,7 +1716,7 @@ function resetUploadForm() {
   document.getElementById('project-field').style.display='none';
   document.getElementById('project-select').value='';
   document.querySelectorAll('.type-card').forEach(b=>b.classList.remove('selected'));
-  selectedType='';
+  selectedTypes=[];
   pendingPhotos=[];
   renderPhotoTagger();
 }
@@ -1896,7 +1927,11 @@ async function renderReport() {
     const filterBrandVal = document.getElementById('report-brand').value;
     if (stockData && stockData.length) {
       let sf = stockData;
-      if (days!=='all') { const c=new Date(); c.setDate(c.getDate()-parseInt(days)); sf=stockData.filter(r=>new Date(r.date)>=c); }
+      const stockFrom = document.getElementById('stock-sum-from') ? document.getElementById('stock-sum-from').value : '';
+      const stockTo = document.getElementById('stock-sum-to') ? document.getElementById('stock-sum-to').value : '';
+      if (stockFrom) sf = sf.filter(r=>r.date>=stockFrom);
+      if (stockTo) sf = sf.filter(r=>r.date<=stockTo);
+      if (!stockFrom && !stockTo && days!=='all') { const c=new Date(); c.setDate(c.getDate()-parseInt(days)); sf=sf.filter(r=>new Date(r.date)>=c); }
       const skuMap = {};
       sf.forEach(r=>{
         (r.entries||[]).forEach(e=>{
@@ -2616,6 +2651,12 @@ async function loadSettings() {
 async function reloadSettings() {
   await loadSettings();
   buildOutletIndex();
+}
+
+function clearStockSumDates() {
+  document.getElementById('stock-sum-from').value = '';
+  document.getElementById('stock-sum-to').value = '';
+  renderReport();
 }
 
 // ============ TOAST ============
