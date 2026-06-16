@@ -402,10 +402,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
       <div style="font-weight:700;font-size:15px">SK<span style="color:var(--accent)">MY</span> Merch Photos</div>
       <div id="share-view-sub" style="font-size:12px;color:var(--muted)"></div>
     </div>
-    <div style="display:flex;gap:6px;margin-left:auto">
-      <button class="btn btn-sm btn-outline" onclick="downloadAllZip()">📦 ZIP</button>
-      <button class="btn btn-sm btn-outline" onclick="downloadAllPdf()">📄 PDF</button>
-    </div>
+    <button class="btn btn-sm btn-outline" style="margin-left:auto" onclick="downloadAllVisible()">📥 Download All</button>
   </div>
   <div class="share-filters">
     <select id="sv-brand" onchange="renderShareView()"><option value="">All Brands</option></select>
@@ -517,6 +514,22 @@ async function sbUpdate(table, id, data) {
 async function sbDelete(table, id) {
   await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${id}`, {
     method:'DELETE', headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}
+  });
+}
+
+async function sbAddSetting(table, data) {
+  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
+    method:'POST',
+    headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json','Prefer':'return=representation'},
+    body: JSON.stringify(data)
+  });
+  return res.json();
+}
+
+async function sbDeleteSetting(table, id) {
+  await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${id}`, {
+    method:'DELETE',
+    headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}
   });
 }
 async function sbSearch(table, filters={}, dateFrom='', dateTo='', brandFilter='') {
@@ -1532,7 +1545,7 @@ async function populateAllSelects() {
   const bSel = document.getElementById('brand-select-hidden');
   // Merch
   const mSel = document.getElementById('merch-name');
-  mSel.innerHTML = '<option value="">Select...</option>'+merchs.map(m=>`<option>${m}</option>`).join('');
+  mSel.innerHTML = '<option value="">Select...</option>'+merchs.map(m=>`<option>${typeof m==='object'?m.name:m}</option>`).join('');
   // Project
   const pSel = document.getElementById('project-select');
   try {
@@ -1541,19 +1554,19 @@ async function populateAllSelects() {
     pSel.innerHTML = '<option value="">No project</option>'+projects.filter(p=>p.status!=='Completed').map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
   } catch(e) { pSel.innerHTML = '<option value="">No project</option>'; }
   // Proj brand modal
-  document.getElementById('proj-brand').innerHTML = '<option value="">All / General</option>'+brands.map(b=>`<option>${b}</option>`).join('');
+  document.getElementById('proj-brand').innerHTML = '<option value="">All / General</option>'+brands.map(b=>`<option>${typeof b==='object'?b.name:b}</option>`).join('');
   // Update photo taggers
   renderPhotoTagger();
 }
 
 function populateFilterSelects() {
-  document.getElementById('f-brand').innerHTML = '<option value="">All Brands</option>'+brands.map(b=>`<option>${b}</option>`).join('');
+  document.getElementById('f-brand').innerHTML = '<option value="">All Brands</option>'+brands.map(b=>`<option>${typeof b==='object'?b.name:b}</option>`).join('');
   const usedOutlets = [...new Set(records.map(r=>r.outlet))].sort();
   document.getElementById('f-outlet').innerHTML = '<option value="">All Outlets</option>'+usedOutlets.map(o=>`<option>${o}</option>`).join('');
 }
 
 function populateReportSelects() {
-  document.getElementById('report-brand').innerHTML = '<option value="">All Brands</option>'+brands.map(b=>`<option>${b}</option>`).join('');
+  document.getElementById('report-brand').innerHTML = '<option value="">All Brands</option>'+brands.map(b=>`<option>${typeof b==='object'?b.name:b}</option>`).join('');
 }
 
 // ============ TYPE ============
@@ -1805,7 +1818,7 @@ async function renderProjects() {
 
 function openProjectModal(id=null) {
   editingProjectId = id;
-  document.getElementById('proj-brand').innerHTML = '<option value="">All / General</option>'+brands.map(b=>`<option>${b}</option>`).join('');
+  document.getElementById('proj-brand').innerHTML = '<option value="">All / General</option>'+brands.map(b=>`<option>${typeof b==='object'?b.name:b}</option>`).join('');
   if (id) {
     const p = projects.find(x=>x.id===id);
     document.getElementById('proj-modal-title').textContent='Edit Project';
@@ -1937,7 +1950,7 @@ function exportCSV() {
 
 // ============ SHARE ============
 function openShareModal() {
-  document.getElementById('share-brand').innerHTML='<option value="">All Brands</option>'+brands.map(b=>`<option>${b}</option>`).join('');
+  document.getElementById('share-brand').innerHTML='<option value="">All Brands</option>'+brands.map(b=>`<option>${typeof b==='object'?b.name:b}</option>`).join('');
   const usedOutlets=[...new Set(records.map(r=>r.outlet))].sort();
   document.getElementById('share-outlet').innerHTML='<option value="">All Outlets</option>'+usedOutlets.map(o=>`<option>${o}</option>`).join('');
   document.getElementById('share-link-box').style.display='none';
@@ -2043,123 +2056,15 @@ function renderShareView() {
     </div>`).join('');
 }
 
-async function downloadAllZip() {
+async function downloadAllVisible() {
   const photos = window._visiblePhotos||[];
   if(!photos.length) return showToast('No photos to download','err');
-  showToast('Preparing ZIP... please wait');
-
-  // Load JSZip
-  if (!window.JSZip) {
-    await new Promise((res,rej)=>{
-      const s=document.createElement('script');
-      s.src='https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
-      s.onload=res; s.onerror=rej; document.head.appendChild(s);
-    });
+  showToast('Downloading '+photos.length+' photos...');
+  for(let i=0;i<photos.length;i++) {
+    const p=photos[i];
+    const a=document.createElement('a'); a.href=p.url; a.download=`photo_${i+1}.jpg`; a.target='_blank'; a.click();
+    await new Promise(r=>setTimeout(r,300));
   }
-
-  const zip = new JSZip();
-  const folder = zip.folder('SKMY_Photos');
-  let loaded = 0;
-
-  for (let i=0; i<photos.length; i++) {
-    const p = photos[i];
-    try {
-      const res = await fetch(p.url);
-      const blob = await res.blob();
-      const ext = blob.type.includes('png') ? 'png' : 'jpg';
-      const outletShort = (p.outlet||'').replace(/^Watson /i,'').replace(/[^a-zA-Z0-9]/g,'_').substring(0,20);
-      const fname = (i+1)+'_'+outletShort+'_'+p.date+'.'+ext;
-      folder.file(fname, blob);
-      loaded++;
-      showToast('Loading '+loaded+' of '+photos.length+'...');
-    } catch(e) { console.log('Failed to fetch photo:', p.url); }
-  }
-
-  showToast('Creating ZIP...');
-  const content = await zip.generateAsync({type:'blob'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(content);
-  a.download = 'SKMY_Photos_'+new Date().toISOString().slice(0,10)+'.zip';
-  a.click();
-  showToast('✅ ZIP downloaded! '+loaded+' photos');
-}
-
-async function downloadAllPdf() {
-  const photos = window._visiblePhotos||[];
-  if(!photos.length) return showToast('No photos to download','err');
-  showToast('Preparing PDF... please wait');
-
-  // Load jsPDF
-  if (!window.jspdf) {
-    await new Promise((res,rej)=>{
-      const s=document.createElement('script');
-      s.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
-      s.onload=res; s.onerror=rej; document.head.appendChild(s);
-    });
-  }
-
-  const {jsPDF} = window.jspdf;
-  const doc = new jsPDF({orientation:'portrait', unit:'mm', format:'a4'});
-  const pageW = 210, pageH = 297;
-  const margin = 12;
-  const imgW = pageW - margin*2;
-
-  for (let i=0; i<photos.length; i++) {
-    const p = photos[i];
-    if (i>0) doc.addPage();
-
-    // Header bar
-    doc.setFillColor(124,106,247);
-    doc.rect(0,0,pageW,16,'F');
-    doc.setTextColor(255,255,255);
-    doc.setFontSize(9); doc.setFont('helvetica','bold');
-    doc.text('SKMY Merch Photos', margin, 7);
-    doc.setFont('helvetica','normal');
-    doc.text((i+1)+' / '+photos.length, pageW-margin, 7, {align:'right'});
-
-    // Outlet & date info
-    doc.setTextColor(40,40,60);
-    doc.setFontSize(13); doc.setFont('helvetica','bold');
-    doc.text(p.outlet||'', margin, 26);
-    doc.setFontSize(9); doc.setFont('helvetica','normal');
-    doc.setTextColor(100,100,130);
-    doc.text('📅 '+(p.date||'') + '   🏷️ '+(p.photoBrands&&p.photoBrands.length ? p.photoBrands.join(', ') : (p.recordBrands||[]).join(', ')), margin, 33);
-    doc.text('Type: '+(p.type||''), margin, 39);
-
-    // Load image
-    try {
-      const res = await fetch(p.url);
-      const blob = await res.blob();
-      const dataUrl = await new Promise(resolve=>{
-        const reader = new FileReader();
-        reader.onload = e => resolve(e.target.result);
-        reader.readAsDataURL(blob);
-      });
-      const imgType = blob.type.includes('png') ? 'PNG' : 'JPEG';
-      // Image area
-      const imgY = 44;
-      const imgH = pageH - imgY - margin;
-      doc.addImage(dataUrl, imgType, margin, imgY, imgW, imgH, undefined, 'MEDIUM');
-    } catch(e) {
-      doc.setTextColor(200,80,80);
-      doc.text('Failed to load image', margin, 60);
-    }
-
-    showToast('Processing '+(i+1)+' of '+photos.length+'...');
-  }
-
-  // Footer on each page
-  const total = doc.getNumberOfPages();
-  for (let i=1; i<=total; i++) {
-    doc.setPage(i);
-    doc.setFillColor(240,240,250);
-    doc.rect(0,287,pageW,10,'F');
-    doc.setFontSize(7); doc.setTextColor(120,120,150);
-    doc.text('SKMY Merch Tracker · Confidential · Page '+i+' of '+total, pageW/2, 293, {align:'center'});
-  }
-
-  doc.save('SKMY_Photos_'+new Date().toISOString().slice(0,10)+'.pdf');
-  showToast('✅ PDF downloaded! '+photos.length+' photos');
 }
 
 // ============ SETTINGS ============
@@ -2181,12 +2086,66 @@ function renderSettings() {
     </div>`).join('');
 }
 
-function addOutlet(){const chain=document.getElementById('new-outlet-chain').value.trim(),name=document.getElementById('new-outlet-name').value.trim();if(!name)return showToast('Enter outlet name','err');outlets.push({chain:chain||'Other',name});document.getElementById('new-outlet-chain').value='';document.getElementById('new-outlet-name').value='';save();renderSettings();populateAllSelects();showToast('Outlet added');}
-function removeOutlet(i){outlets.splice(i,1);save();renderSettings();populateAllSelects();}
-function addBrand(){const b=document.getElementById('new-brand').value.trim();if(!b)return showToast('Enter brand name','err');if(brands.includes(b))return showToast('Already exists','err');brands.push(b);document.getElementById('new-brand').value='';save();renderSettings();populateAllSelects();showToast('Brand added');}
-function removeBrand(i){brands.splice(i,1);save();renderSettings();populateAllSelects();}
-function addMerch(){const m=document.getElementById('new-merch').value.trim();if(!m)return showToast('Enter name','err');merchs.push(m);document.getElementById('new-merch').value='';save();renderSettings();populateAllSelects();showToast('Team member added');}
-function removeMerch(i){merchs.splice(i,1);save();renderSettings();populateAllSelects();}
+async function addOutlet(){
+  const chain = document.getElementById('new-outlet-chain').value;
+  const name = document.getElementById('new-outlet-name').value.trim();
+  if(!name) return showToast('Enter outlet name','err');
+  try {
+    const res = await sbAddSetting('settings_outlets', {chain: chain||'Other', name});
+    if(res && res[0]) outlets.push({chain: chain||'Other', name, id: res[0].id});
+    document.getElementById('new-outlet-chain').value = 'Watson';
+    document.getElementById('new-outlet-name').value = '';
+    buildOutletIndex(); renderSettings(); populateAllSelects();
+    showToast('✅ Outlet added');
+  } catch(e) { showToast('Failed: '+e.message,'err'); }
+}
+async function removeOutlet(id){
+  try {
+    await sbDeleteSetting('settings_outlets', id);
+    outlets = outlets.filter(o=>o.id!=id);
+    buildOutletIndex(); renderSettings(); populateAllSelects();
+  } catch(e) { showToast('Failed','err'); }
+}
+async function addBrand(){
+  const b = document.getElementById('new-brand').value.trim();
+  if(!b) return showToast('Enter brand name','err');
+  const names = brands.map(x=>typeof x==='object'?x.name:x);
+  if(names.includes(b)) return showToast('Already exists','err');
+  try {
+    const res = await sbAddSetting('settings_brands', {name: b});
+    if(res && res[0]) brands.push({name: b, id: res[0].id});
+    else brands.push(b);
+    document.getElementById('new-brand').value = '';
+    renderSettings(); populateAllSelects();
+    showToast('✅ Brand added');
+  } catch(e) { showToast('Failed','err'); }
+}
+async function removeBrand(id){
+  try {
+    await sbDeleteSetting('settings_brands', id);
+    brands = brands.filter(b=>(typeof b==='object'?b.id:b)!=id);
+    renderSettings(); populateAllSelects();
+  } catch(e) { showToast('Failed','err'); }
+}
+async function addMerch(){
+  const m = document.getElementById('new-merch').value.trim();
+  if(!m) return showToast('Enter name','err');
+  try {
+    const res = await sbAddSetting('settings_merchs', {name: m});
+    if(res && res[0]) merchs.push({name: m, id: res[0].id});
+    else merchs.push(m);
+    document.getElementById('new-merch').value = '';
+    renderSettings(); populateAllSelects();
+    showToast('✅ Team member added');
+  } catch(e) { showToast('Failed','err'); }
+}
+async function removeMerch(id){
+  try {
+    await sbDeleteSetting('settings_merchs', id);
+    merchs = merchs.filter(m=>(typeof m==='object'?m.id:m)!=id);
+    renderSettings(); populateAllSelects();
+  } catch(e) { showToast('Failed','err'); }
+}
 function saveConfig(){cloudName=document.getElementById('cfg-cloud').value.trim();uploadPreset=document.getElementById('cfg-preset').value.trim();localStorage.setItem('skmy_cloud',cloudName);localStorage.setItem('skmy_preset',uploadPreset);showToast('Config saved');}
 async function clearAllData(){
   if(!confirm('Delete ALL records? This cannot be undone.'))return;
@@ -2630,6 +2589,33 @@ function getStockBadge(outlet, date) {
   // Check if there's a stock count for this outlet+date
   const found = stockRecords.find(r=>r.outlet===outlet && r.date===date);
   return found ? `<span class="badge badge-green" style="font-size:10px">📦 Stock</span>` : '';
+}
+
+
+// ============ SETTINGS LOADER ============
+async function loadSettings() {
+  try {
+    const [ob, bb, mb] = await Promise.all([
+      sbGet('settings_outlets'),
+      sbGet('settings_brands'),
+      sbGet('settings_merchs')
+    ]);
+    if (ob && ob.length) outlets = ob.map(r=>({chain:r.chain||'', name:r.name, id:r.id}));
+    else outlets = DEFAULT_OUTLETS;
+    if (bb && bb.length) brands = bb.map(r=>({name:r.name, id:r.id}));
+    else brands = DEFAULT_BRANDS.map(b=>({name:b, id:0}));
+    if (mb && mb.length) merchs = mb.map(r=>({name:r.name, id:r.id}));
+    else merchs = DEFAULT_MERCH.map(m=>({name:m, id:0}));
+  } catch(e) {
+    outlets = DEFAULT_OUTLETS;
+    brands = DEFAULT_BRANDS.map(b=>({name:b, id:0}));
+    merchs = DEFAULT_MERCH.map(m=>({name:m, id:0}));
+  }
+}
+
+async function reloadSettings() {
+  await loadSettings();
+  buildOutletIndex();
 }
 
 // ============ TOAST ============
