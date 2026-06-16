@@ -188,6 +188,8 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
     <button class="nav-tab" onclick="showPage('projects',this)">📌 Projects</button>
     <button class="nav-tab" onclick="showPage('report',this)">📊 Report</button>
     <button class="nav-tab" onclick="showPage('settings',this)">⚙️ Settings</button>
+    <button class="nav-tab" onclick="showPage('stock',this)">📦 Stock</button>
+    <button class="nav-tab" onclick="showPage('stock-history',this)">📋 Stock History</button>
   </div>
 </nav>
 
@@ -201,9 +203,9 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
     <div class="field">
       <label>Outlet *</label>
       <div style="position:relative">
-        <input type="text" id="outlet-search" placeholder="🔍 Search outlet..." autocomplete="off" oninput="filterOutlets(this.value)" onfocus="showOutletDropdown()" style="width:100%">
-        <div id="outlet-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--surface);border:1px solid var(--accent);border-radius:0 0 8px 8px;max-height:220px;overflow-y:auto;z-index:50">
-        </div>
+        <input type="text" id="outlet-search" placeholder="🔍 Search outlet..." autocomplete="off" 
+          oninput="filterOutlets(this.value)" onfocus="showOutletDropdown()" style="width:100%">
+        <div id="outlet-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--surface);border:1px solid var(--accent);border-radius:0 0 8px 8px;max-height:220px;overflow-y:auto;z-index:50"></div>
       </div>
       <input type="hidden" id="outlet">
     </div>
@@ -212,14 +214,14 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
   </div>
 
   <div class="card">
-    <div class="card-title">Visit Type * <span style="font-size:10px;color:var(--muted);font-weight:400;letter-spacing:0">(select all that apply)</span></div>
+    <div class="card-title">Visit Type *</div>
     <div class="type-grid" id="type-grid">
-      <button class="type-card" onclick="toggleType('Routine Visit',this)">🔄 Routine Visit</button>
-      <button class="type-card" onclick="toggleType('POSM Installation',this)">📌 POSM Installation</button>
-      <button class="type-card" onclick="toggleType('Shelf Arrangement',this)">📦 Shelf Arrangement</button>
-      <button class="type-card" onclick="toggleType('New Display',this)">✨ New Display</button>
-      <button class="type-card" onclick="toggleType('Promotion',this)">🎯 Promotion</button>
-      <button class="type-card" onclick="toggleType('Project',this)">🗂️ Project</button>
+      <button class="type-card" onclick="selectType('Routine Visit',this)">🔄 Routine Visit</button>
+      <button class="type-card" onclick="selectType('POSM Installation',this)">📌 POSM Installation</button>
+      <button class="type-card" onclick="selectType('Shelf Arrangement',this)">📦 Shelf Arrangement</button>
+      <button class="type-card" onclick="selectType('New Display',this)">✨ New Display</button>
+      <button class="type-card" onclick="selectType('Promotion',this)">🎯 Promotion</button>
+      <button class="type-card" onclick="selectType('Project',this)">🗂️ Project</button>
     </div>
     <div class="field" id="project-field" style="display:none;margin-top:10px">
       <label>Link to Project</label>
@@ -295,9 +297,12 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
     </select>
     <select id="report-brand" onchange="renderReport()"><option value="">All Brands</option></select>
     <button class="btn btn-sm btn-outline" onclick="exportCSV()">📥 Export CSV</button>
+    <button class="btn btn-sm btn-outline" onclick="generatePDF()" style="border-color:var(--danger);color:var(--danger)">📄 Export PDF</button>
     <button class="btn btn-sm btn-success" onclick="openShareModal()">🔗 Share Link</button>
   </div>
   <div id="report-content"></div>
+
+  <div id="stock-summary-section" style="margin-top:20px"></div>
 </div>
 
 <!-- ===== SETTINGS ===== -->
@@ -308,14 +313,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
   <div class="card">
     <div class="card-title">Outlets</div>
     <div class="add-row">
-      <select id="new-outlet-chain" style="flex:0.5;padding:10px 12px;background:var(--surface2);border:1px solid var(--border);border-radius:8px;color:var(--text);font-family:var(--font);font-size:13px;-webkit-appearance:none">
-        <option value="Watson">Watson</option>
-        <option value="Watson Pink">Watson Pink</option>
-        <option value="Guardian">Guardian</option>
-        <option value="Sasa">Sasa</option>
-        <option value="Sephora">Sephora</option>
-        <option value="Other">Other</option>
-      </select>
+      <input type="text" id="new-outlet-chain" placeholder="Chain" style="flex:0.5">
       <input type="text" id="new-outlet-name" placeholder="Outlet name">
       <button class="btn btn-success btn-sm" onclick="addOutlet()">Add</button>
     </div>
@@ -413,6 +411,66 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
   <div class="share-grid" id="share-grid"></div>
 </div>
 
+
+<!-- ===== STOCK COUNT ===== -->
+<div class="page wide" id="page-stock">
+  <div class="page-title">Stock Count</div>
+  <div class="page-sub">Record stock levels by outlet and brand</div>
+
+  <div class="card">
+    <div class="card-title">Outlet & Date</div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+      <div class="field">
+        <label>Outlet *</label>
+        <div style="position:relative">
+          <input type="text" id="stock-outlet-search" placeholder="🔍 Search outlet..." autocomplete="off" oninput="filterStockOutlets(this.value)" onfocus="showStockOutletDropdown()">
+          <div id="stock-outlet-dropdown" style="display:none;position:absolute;top:100%;left:0;right:0;background:var(--surface);border:1px solid var(--accent);border-radius:0 0 8px 8px;max-height:200px;overflow-y:auto;z-index:50"></div>
+        </div>
+        <input type="hidden" id="stock-outlet">
+      </div>
+      <div class="field">
+        <label>Date *</label>
+        <input type="date" id="stock-date">
+      </div>
+    </div>
+    <div class="field">
+      <label>Merchandizer</label>
+      <select id="stock-merch"><option value="">Select...</option></select>
+    </div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Select Brands to Count</div>
+    <div id="stock-brand-select" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px"></div>
+  </div>
+
+  <div id="stock-sku-section"></div>
+
+  <button class="btn btn-primary" onclick="submitStock()" id="stock-submit-btn">✅ Submit Stock Count</button>
+</div>
+
+<!-- ===== STOCK HISTORY ===== -->
+<div class="page wide" id="page-stock-history" style="display:none">
+</div>
+
+<!-- ===== STOCK HISTORY ===== -->
+<div class="page wide" id="page-stock-history">
+  <div class="page-title">Stock History</div>
+  <div class="page-sub">Browse and export stock count records</div>
+
+  <div class="filter-bar">
+    <select id="sh-brand" onchange="renderStockHistory()"><option value="">All Brands</option></select>
+    <select id="sh-outlet" onchange="renderStockHistory()"><option value="">All Outlets</option></select>
+    <input type="date" id="sh-date-from" onchange="renderStockHistory()" placeholder="From">
+    <input type="date" id="sh-date-to" onchange="renderStockHistory()" placeholder="To">
+    <button class="btn btn-sm btn-outline" onclick="clearStockFilters()">Clear</button>
+    <button class="btn btn-sm btn-success" onclick="exportStockExcel()">📊 Export Excel</button>
+  </div>
+
+  <div id="sh-stats" class="stats-row" style="grid-template-columns:repeat(3,1fr)"></div>
+  <div id="sh-list"></div>
+</div>
+
 <!-- LIGHTBOX -->
 <div class="lightbox" id="lightbox" onclick="closeLightboxClick(event)">
   <button class="lightbox-close" onclick="closeLightbox()">✕</button>
@@ -467,41 +525,6 @@ async function sbSearch(table, filters={}, dateFrom='', dateTo='', brandFilter='
   if (brandFilter) url += `&brands=cs.{"${brandFilter}"}`;
   const res = await fetch(url, {headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}});
   return res.json();
-}
-
-// Settings via Supabase
-async function loadSettings() {
-  try {
-    const [ob, bb, mb] = await Promise.all([
-      sbGet('settings_outlets'),
-      sbGet('settings_brands'),
-      sbGet('settings_merchs')
-    ]);
-    if (ob && ob.length) outlets = ob.map(r=>({chain:r.chain, name:r.name, id:r.id}));
-    else outlets = JSON.parse(localStorage.getItem('skmy_outlets')||JSON.stringify(DEFAULT_OUTLETS));
-    if (bb && bb.length) brands = bb.map(r=>r.name);
-    else brands = JSON.parse(localStorage.getItem('skmy_brands')||JSON.stringify(DEFAULT_BRANDS));
-    if (mb && mb.length) merchs = mb.map(r=>r.name);
-    else merchs = JSON.parse(localStorage.getItem('skmy_merchs')||JSON.stringify(DEFAULT_MERCH));
-  } catch(e) {
-    outlets = JSON.parse(localStorage.getItem('skmy_outlets')||JSON.stringify(DEFAULT_OUTLETS));
-    brands = JSON.parse(localStorage.getItem('skmy_brands')||JSON.stringify(DEFAULT_BRANDS));
-    merchs = JSON.parse(localStorage.getItem('skmy_merchs')||JSON.stringify(DEFAULT_MERCH));
-  }
-}
-
-async function sbAddSetting(table, data) {
-  const res = await fetch(`${SUPABASE_URL}/rest/v1/${table}`, {
-    method:'POST', headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY,'Content-Type':'application/json','Prefer':'return=representation'},
-    body: JSON.stringify(data)
-  });
-  return res.json();
-}
-
-async function sbDeleteSetting(table, id) {
-  await fetch(`${SUPABASE_URL}/rest/v1/${table}?id=eq.${id}`, {
-    method:'DELETE', headers:{'apikey':SUPABASE_KEY,'Authorization':'Bearer '+SUPABASE_KEY}
-  });
 }
 
 // ============ DEFAULT DATA ============
@@ -1395,8 +1418,10 @@ const DEFAULT_OUTLETS = [
   {chain:'Watson',name:'Watson RAZAK CITY SUNGAI BESI (RCSB)'},
   {chain:'Watson',name:'Watson IOI MALL DAMANSARA (IOID)'}
 ];
-const DEFAULT_BRANDS = ['Beauty Of Joseon','Heimish','COSRX','Anua','Some By Mi','Skin1004','Isntree','Axis-Y'];
+const DEFAULT_BRANDS = ["A.SOLUTION", "Abib", "Anua", "Atopalm", "Beauty of Joseon", "Belif", "Biodance", "CNP", "DERMABLOCK", "DROP BE", "Dr.CPU", "Isntree", "Numbuzin", "Point", "SON&PARK ARTI", "TirTir", "Two Edit", "fwee", "milktouch"];
 const DEFAULT_MERCH = ['Aiman','Coconut','Cornelia','Kelvin'];
+
+const PRODUCT_LIST = {"Beauty of Joseon": [{"sku": "JSMSM03-SR", "desc": "BOJ RELF RICE+PROBIO SUN 50ML", "plu": "23631"}, {"sku": "JSMS01-TG", "desc": "BOJ GINSENG ESS WTR 150ML", "plu": "23644"}, {"sku": "JSMS01-SCR", "desc": "BOJ CALM GRNTEA+PANTL SRM 30ML", "plu": "23645"}, {"sku": "JSMS01-CR", "desc": "BOJ DYNASTY CRM 50ML", "plu": "23676"}, {"sku": "JSMS01-I", "desc": "BOJ GINSENG RTNL EYE SRM 30ML", "plu": "1001695"}, {"sku": "JSMS01-Sg", "desc": "BOJ GLOW PROPOLIS + NIA SRM 30ML", "plu": "23647"}, {"sku": "JSMS01-SriR", "desc": "BOJ GLOW RICE+ARBUTIN SRM 30ML", "plu": "23613"}, {"sku": "JSMS01-SRVR", "desc": "BOJ REV GINSENG+ SNAIL SRM 30ML", "plu": "23626"}, {"sku": "JSMP05-PK", "desc": "BOJ REDBEAN PORE MSK 140ML", "plu": "62929"}, {"sku": "JSMS05-GEL", "desc": "BOJ RED BEAN WTR GEL 100ML", "plu": "62997"}, {"sku": "JSMC02-OCRR", "desc": "BOJ RADIANCE CLN BALM 100ML", "plu": "62917"}, {"sku": "JSMSM07-S", "desc": "BOJ MW+CAM MATTE SUNSTICK 18G", "plu": "62914"}, {"sku": "MYJSM-SkitWS", "desc": "BOJ DAILY SUN CARE KIT 1S", "plu": "1000553"}, {"sku": "JSMS01-TGD", "desc": "BOJ GINSENG ESS WTR 40ML", "plu": "1006701"}, {"sku": "JSMC01-OCR", "desc": "BOJ GINSENG CLN OIL 210ML", "plu": "1009204"}, {"sku": "JSMC02-FG", "desc": "BOJ GREEN PLUM RFSH CLNS 100ML", "plu": "1011188"}, {"sku": "JSMS10-T", "desc": "BOJ GLOW REPLN RICE MILK 150ML", "plu": "1011635"}, {"sku": "JSMP10-PK", "desc": "BOJ RICE & HONEY MASK 150ML", "plu": "1011627"}, {"sku": "JSMSM03-SRA", "desc": "BOJ RELF AQUA FRESH SUN 50ML", "plu": "1012331"}, {"sku": "JSMS09-PATCH", "desc": "Revive Under Eye Patch (60s)", "plu": "1029990"}, {"sku": "JSMSM03-SCTG", "desc": "BOJ TONE-UP SUNSCREEN GRN 50ML", "plu": "1031951"}, {"sku": "JSMSM03-SCTP", "desc": "BOJ TONE-UP SUN.SC PURPLE 50ML", "plu": "1031952"}], "Numbuzin": [{"sku": "NBC04-OC", "desc": "NBZ N1 EASY CLNS OIL 200ML", "plu": "67201"}, {"sku": "NBSM06-SCPGC", "desc": "NBZ N1 PURE CLN TONE UP 50ML", "plu": "67204"}, {"sku": "NBSM06-HE1", "desc": "NBZ N1 CLR FILTER SUN ESS 50ML", "plu": "1017677"}, {"sku": "NBSM06-SCPB", "desc": "NBZ N3 PORCL BASE TONE UP 50ML (set)", "plu": "67447"}, {"sku": "NBS03-TP3", "desc": "NBZ N3 RAD GLW JMB ESS PAD 70S", "plu": "66984"}, {"sku": "NBS03-TP5", "desc": "NBZ NO.5 VIT NIA CON PAD 180ML", "plu": "1005459"}, {"sku": "NBS02-TSG", "desc": "NBZ N3 SUP GLOW ESS TNR 200ML", "plu": "66882"}, {"sku": "NBS01-SSSS", "desc": "NBZ N3 SKN SOFTN SRM 50ML", "plu": "67419"}, {"sku": "NBS01-SGBS", "desc": "NBZ N5 GDBY BLEMISH SRM 50ML", "plu": "67428"}, {"sku": "NBS01-SDSM", "desc": "NBZ N6 DEEP SLEEP MSK SRM 50ML", "plu": "67452"}, {"sku": "NBS05-C5", "desc": "NBZ N5 DALY MLTI VIT CRM 60ML", "plu": "67454"}, {"sku": "NBS08-A5MR", "desc": "NBZ NO.5 VIT CON SRM 30ML", "plu": "1006706"}, {"sku": "NBS02-T5", "desc": "NBZ NO.5 VIT ESS TNR 200ML", "plu": "1008513"}, {"sku": "NBS05-C1P", "desc": "NBZ NO.1 PANTOTHENIC CRM 80ML", "plu": "1011636"}, {"sku": "NBP07-MHA", "desc": "NBZ NO1 PANTOTHENIC B5 MASK 1S", "plu": "1025223"}, {"sku": "NBS07-MCP", "desc": "NBZ NO2 ROSE PDRN COLL MASK 1S", "plu": "1025220"}, {"sku": "NBP07-M41", "desc": "NBZ NO4 ICY SOOTHING MASK 1S", "plu": "1025218"}, {"sku": "NBP07-M51", "desc": "NBZ NO5 GLUTA VITAMIN MASK 1S", "plu": "1025219"}, {"sku": "NBS01-S1", "desc": "NBZ NO.1 PANTOTHENIC SRM 50ML", "plu": "1011637"}, {"sku": "NBS01-S2", "desc": "NBZ NO.2 ROSE PDRN SRM 30ML", "plu": "1027247"}, {"sku": "NBS01-S3", "desc": "NBZ NO.3 BLUE RETINOL SRM 30ML", "plu": "1027248"}, {"sku": "NBS01-ESS09", "desc": "NBZ NO9. NAD+ BIO ESS 50ML", "plu": "1027249"}, {"sku": "NBS02-T9", "desc": "NBZ NO.9 NAD PDRN TNR 150ML", "plu": "1033926"}], "Anua": [{"sku": "ANS01-T250R", "desc": "ANUA HEARTLEAF 77% TONER 250ML", "plu": "1002485"}, {"sku": "ANC01-Pad", "desc": "ANUA HEARTLEAF 77% TNR PAD 70S", "plu": "1002486"}, {"sku": "ANS01-A", "desc": "ANUA HEARTLEAF 80% AMPOUL 30ML", "plu": "1002482"}, {"sku": "ANS01-ED", "desc": "ANUA HEARTLEAF 70% LTN 200ML", "plu": "1002696"}, {"sku": "ANC01-OCR", "desc": "ANUA HEARTLEAF CLN OIL 200ML", "plu": "1003319"}, {"sku": "ANC01-FQRRR", "desc": "ANUA HEARTLEAF CLN FOAM 150ML", "plu": "1005340"}, {"sku": "ANS01-T40R", "desc": "ANUA HEARTLEAF 77 TONER 40ML", "plu": "1008837"}, {"sku": "ANC01-OCMRR", "desc": "ANUA HEARTLEAF CLN OIL 20ML", "plu": "1008828"}, {"sku": "ANS06-T250R", "desc": "ANUA PEACH 77 NIACIN TNR 250ML", "plu": "1011626"}, {"sku": "ANS06-SR", "desc": "ANUA PEACH 70% SERUM 30ML", "plu": "1011628"}, {"sku": "ANS10-SPDRN", "desc": "ANUA PDRN HA 100 SRM 30ML", "plu": "1018185"}, {"sku": "ANS10-S30", "desc": "ANUA NIA 10 + TXA 3 SERUM 30ML", "plu": "1021381"}, {"sku": "ANP99-MH", "desc": "[KDH] HEARTLEAF 77 SOOTHING MASK 25ml (1PC)_EU", "plu": "1032381"}, {"sku": "ANP99-MPN", "desc": "[KDH] PEACH 70 NIACIN SERUM FACE MASK 25ml (1PC)_EU", "plu": "1032383"}, {"sku": "ANP99-MR", "desc": "[KDH] RETINOL NIACIN NIGHT CARE MASK 24ml (1PCS)_EU", "plu": "1032382"}, {"sku": "ANP99-MRI", "desc": "[KDH] RICE 70 INTENSIVE MOISTURIZING MILK MASK 25ml (1PC)_EU", "plu": "1032386"}, {"sku": "ANP99-MT", "desc": "[KDH] NIACINAMIDE TXA SERUM MASK 28ml (1PC)", "plu": "1032385"}, {"sku": "ANSM99-SCIG", "desc": "[KDH] INVISIBLE GLOW FINISH SUNSCREEN STICK 18g_EU", "plu": "1032392"}, {"sku": "ANSM99-SCIM", "desc": "[KDH] INVISIBLE MATTE FINISH SUNSCREEN 50ml_EU", "plu": "1032391"}, {"sku": "ANSM99-SCMW", "desc": "[KDH] MINERAL WEIGHTLESS FINISH SUNSCREEN 50ml_EU", "plu": "1032388"}, {"sku": "ANSM99-SCZ", "desc": "[KDH] ZERO-CAST MOISTURIZING FINISH SUNSCREEN 50ml_EU", "plu": "1032389"}, {"sku": "ANS01-T150R", "desc": "ANUA HEARTLEAF 77 SOOTHING TONER 150ml", "plu": "1033169"}, {"sku": "ANS06-T150R", "desc": "ANUA PEACH 77 NIACIN ESSENCE TONER 150ml", "plu": "1033143"}, {"sku": "ANS11-T150", "desc": "ANUA RICE 70 GLOW MILKY TONER 150ml", "plu": "1033165"}, {"sku": "ANS10-TTXA", "desc": "ANUA TXA Brightening Toner 250ml", "plu": "1033169"}], "Atopalm": [{"sku": "ATPBS02-BR", "desc": "ATP TOP TO TOE WASH 300ML", "plu": "1005352"}, {"sku": "ATPS03-CM65R", "desc": "ATP MLE CREAM 65ML", "plu": "1005353"}, {"sku": "ATPS03-CM100R", "desc": "ATP MLE CREAM 100ML", "plu": "1005357"}, {"sku": "ATPS03-E200R", "desc": "ATP MLE LOTION 200ML", "plu": "1005358"}], "Belif": [{"sku": "belifS24-CM30", "desc": "BELIF MOIST BOMB CREAM 30ML", "plu": "1007103"}, {"sku": "belifS24-CA30", "desc": "BELIF AQUA BOMB CREAM 30ML", "plu": "1007102"}, {"sku": "belifC25-FJ", "desc": "BELIF AQUA BOMB CLN 160ML", "plu": "1007104"}, {"sku": "MYbelifC25-FJWS", "desc": "BELIF AQUA BOMB CLN 160ML", "plu": "1007104"}, {"sku": "belifS08-S50", "desc": "BELIF NUMERO 10 ESSENCE 50ML", "plu": "1007105"}, {"sku": "MYbelifS08-S50WS", "desc": "BELIF NUMERO 10 ESSENCE 50ML", "plu": "1007105"}], "CNP": [{"sku": "CNPS01-PS", "desc": "CNP PROPOLIS TRT AMP ESS 150ML", "plu": "1007074"}, {"sku": "CNPS01-A15r", "desc": "CNP PROPOLIS ENERGY AMP 15ML", "plu": "1007100"}, {"sku": "MYCNPS01-A15rWS", "desc": "CNP PROPOLIS ENERGY AMP 15ML", "plu": "1007100"}, {"sku": "CNPP03-BlackHkitrr", "desc": "CNP ANTI-PORE BLACKHEAD KIT 1S", "plu": "1007101"}], "Isntree": [{"sku": "ISNSM01-SCS", "desc": "ISNTREE HA AIRY SUNSTICK 22G", "plu": "1009309"}, {"sku": "ISNSM01-SCG", "desc": "ISNTREE HA WATERY SUN GEL 50ML", "plu": "1009239"}, {"sku": "ISNS22-A", "desc": "ISNTREE UL MOLECULAR SRM 50ML", "plu": "1009240"}, {"sku": "ISNS22-T", "desc": "ISNTREE UL MOLECULAR TNR 300ML", "plu": "1009244"}, {"sku": "ISNS22-PH", "desc": "ISNTREE UL MOLECULAR PAD 60S", "plu": "1009241"}, {"sku": "ISNS21-SET1", "desc": "ISNTREE X JAEMIN SPC BOX 1S", "plu": "1024875"}, {"sku": "ISNSM15-SCF", "desc": "HYALURONIC ACID FRESH SUN SERUM 50ml", "plu": "1031958"}, {"sku": "", "desc": "GIM PDRN HYDRO BOUNCY AMPOULE 50ml", "plu": ""}, {"sku": "", "desc": "GIM PDRN BOOSTING GLOW PAD 70pads/200ml", "plu": ""}], "TirTir": [{"sku": "TIRM23-CU13C", "desc": "TIRTIR RED CUSHION 13C", "plu": "1011753"}, {"sku": "TIRM23-CU13N", "desc": "TIRTIR RED CUSHION 13N", "plu": "1011754"}, {"sku": "TIRM23-CU15C", "desc": "TIRTIR RED CUSHION 15C", "plu": "1011718"}, {"sku": "TIRM23-CU17C", "desc": "TIRTIR RED CUSHION 17C", "plu": "1011719"}, {"sku": "TIRM23-CU17N", "desc": "TIRTIR RED CUSHION 17N", "plu": "1011720"}, {"sku": "TIRM23-CU17W", "desc": "TIRTIR RED CUSHION 17W", "plu": "1011721"}, {"sku": "TIRM23-CU21C", "desc": "TIRTIR RED CUSHION 21C", "plu": "1011722"}, {"sku": "TIRM23-CU21N", "desc": "TIRTIR RED CUSHION 21N", "plu": "1011723"}, {"sku": "TIRM23-CU21W", "desc": "TIRTIR RED CUSHION 21W", "plu": "1011724"}, {"sku": "TIRM23-CU23N", "desc": "TIRTIR RED CUSHION 23N", "plu": "1011725"}, {"sku": "TIRM23-CU24N", "desc": "TIRTIR RED CUSHION 24N", "plu": "1011726"}, {"sku": "TIRM23-CU24W", "desc": "TIRTIR RED CUSHION 24W", "plu": "1011727"}, {"sku": "TIRM23-CU25N", "desc": "TIRTIR RED CUSHION 25N", "plu": "1011728"}, {"sku": "TIRM23-CU27N", "desc": "TIRTIR RED CUSHION 27N", "plu": "1011735"}, {"sku": "TIRM23-CU29N", "desc": "TIRTIR RED CUSHION 29N", "plu": "1011736"}, {"sku": "TIRM23-CU33C", "desc": "TIRTIR RED CUSHION 33C", "plu": "1011737"}, {"sku": "TIRM23-CU33N", "desc": "TIRTIR RED CUSHION 33N", "plu": "1011738"}, {"sku": "TIRM23-CU35N", "desc": "TIRTIR RED CUSHION 35N", "plu": "1011739"}, {"sku": "TIRM23-CU40N", "desc": "TIRTIR RED CUSHION 40N", "plu": "1011740"}, {"sku": "TIRM23-CU43N", "desc": "TIRTIR RED CUSHION 43N", "plu": "1011741"}, {"sku": "TIRM23-CUM17C", "desc": "TIRTIR RED MINI CUSHION 17C", "plu": "1014559"}, {"sku": "TIRM23-CUM21N", "desc": "TIRTIR RED MINI CUSHION 21N", "plu": "1014560"}, {"sku": "TIRM23-CUM21W", "desc": "TIRTIR RED MINI CUSHION 21W", "plu": "1014561"}, {"sku": "TIRM23-CUM23N", "desc": "TIRTIR RED MINI CUSHION 23N", "plu": "1014562"}, {"sku": "TIRM23-CUM24N", "desc": "TIRTIR RED MINI CUSHION 24N", "plu": "1014563"}, {"sku": "TIRM23-CUM24W", "desc": "TIRTIR RED MINI CUSHION 24W", "plu": "1014564"}, {"sku": "TIRM23-CUM25N", "desc": "TIRTIR RED MINI CUSHION 25N", "plu": "1014565"}, {"sku": "TIRM23-CUM27N", "desc": "TIRTIR RED MINI CUSHION 27N", "plu": "1014569"}, {"sku": "TIRM23-CUM29N", "desc": "TIRTIR RED MINI CUSHION 29N", "plu": "1014570"}, {"sku": "TIRM24-CU17Cre", "desc": "TIRTIR ALL COVER CUSHION 17C", "plu": "1021374"}, {"sku": "TIRM24-CU21Nre", "desc": "TIRTIR ALL COVER CUSHION 21N", "plu": "1021375"}, {"sku": "TIRM24-CU23Nre", "desc": "TIRTIR ALL COVER CUSHION 23N", "plu": "1021377"}, {"sku": "TIRM25-CU17C", "desc": "TIRTIR AURA CUSHION 17C", "plu": "1021379"}, {"sku": "TIRM25-CU21N", "desc": "TIRTIR AURA CUSHION 21N", "plu": "1021376"}, {"sku": "TIRM25-CU23N", "desc": "TIRTIR AURA CUSHION 23N", "plu": "1021380"}], "Abib": [{"sku": "AbibP22-eyepatch", "desc": "ABIB PDRN EYE PATCH JELLY 60S", "plu": "1025165"}, {"sku": "AbibS11-Spadr", "desc": "ABIB HEARTLEAF SPOT TNR PAD 1S", "plu": "1013702"}, {"sku": "AbibS20-Tpad", "desc": "ABIB JER ROSE COLL TNR PAD 1S", "plu": "1012814"}, {"sku": "AbibS14-Spad", "desc": "ABIB GREEN LHA PORE TNR PAD 1S", "plu": "1012816"}, {"sku": "AbibS21-S", "desc": "ABIB GLUTATHIOSOME SERUM 50ML", "plu": "1019874"}, {"sku": "AbibS21-Spad", "desc": "ABIB GLUTA DARKSPOT TNR PAD 1S", "plu": "1012817"}, {"sku": "AbibS18-Spad", "desc": "ABIB SEDUM HYALURON TNR PAD 1S", "plu": "1012815"}, {"sku": "AbibP09-MJR", "desc": "ABIB M.ACID MSK - JER ROSE 1S", "plu": "1013588"}, {"sku": "AbibP21-M", "desc": "ABIB M.ACID MSK - GLUTA FIT 1S", "plu": "1012818"}, {"sku": "AbibP09-Mlf", "desc": "ABIB M.ACID MSK - HEARTLEAF 1S", "plu": "1013940"}, {"sku": "AbibP09-Maqua", "desc": "ABIB M.ACID MSK - AQUA FIT 1S", "plu": "1013941"}, {"sku": "AbibP02-MHyrR", "desc": "ABIB GUMMY MSK -SEDUM HYALU 1S", "plu": "1012819"}, {"sku": "AbibP02-MMAr", "desc": "ABIB GUMMY MSK - MADECASSO 1S", "plu": "1012820"}, {"sku": "AbibP02-MMr", "desc": "ABIB GUMMY MSK - COLL MILK 1S", "plu": "1012821"}, {"sku": "AbibP02-MHr", "desc": "ABIB GUMMY MSK - HEARTLEAF 1S", "plu": "1012822"}, {"sku": "AbibP20-Meye", "desc": "ABIB JER ROSE COL EYE PATCH 1S", "plu": "1012823"}, {"sku": "AbibS11-AT", "desc": "ABIB HEARTHLEAF TECA SRM 50ML", "plu": "1019865"}], "Biodance": [{"sku": "BODP04-MH1", "desc": "BIODANCE HYDRO CERA MASK 1S", "plu": "1013314"}, {"sku": "BODP04-M1", "desc": "BIODANCE BIO COLLAGEN MASK 1S", "plu": "1013315"}, {"sku": "BODP04-MS1", "desc": "BIODANCE SEA KELP MSK 1S", "plu": "1018912"}, {"sku": "BODP04-MV1", "desc": "BIODACNE RDT VITA NIA MSK 1S", "plu": "1018900"}, {"sku": "BODP04-MRC1", "desc": "REJUVENATING CAVIAR PDRN REAL DEEP MASK 1EA", "plu": "1030124"}], "fwee": [{"sku": "FWMA01-B", "desc": "FWEE SILICONE LIP BRUSH", "plu": "1018597"}, {"sku": "FWCM01-ND01", "desc": "FWEE PUDDING POT ND01 OH", "plu": "1018598"}, {"sku": "FWCM01-ND02", "desc": "FWEE PUDDING POT ND02 LIKE", "plu": "1018599"}, {"sku": "FWCM01-CR01", "desc": "FWEE PUDDING POT CR01 DEAR", "plu": "1018600"}, {"sku": "FWCM01-CR03", "desc": "FWEE PUDDING POT CR03 BFF", "plu": "1018601"}, {"sku": "FWCM01-PK03", "desc": "FWEE PUDDING POT PK03 CHERRY", "plu": "1018602"}, {"sku": "FWCM01-PK05", "desc": "FWEE PUDDING POT PK05 STH", "plu": "1018603"}, {"sku": "FWCM01-RD02", "desc": "FWEE PUDDING POT RD02 MULE", "plu": "1018604"}, {"sku": "FWCM01-RD05", "desc": "FWEE PUDDING POT RD05 GREEDY", "plu": "1018605"}, {"sku": "FWCM01-MV01", "desc": "FWEE PUDDING POT MV01 CHILLN", "plu": "1018606"}, {"sku": "FWCM01-MV04", "desc": "FWEE PUDDING POT MV04 SLAYYY", "plu": "1018609"}, {"sku": "FWCM01-RS02", "desc": "FWEE PUDDING POT RS02 LYRICS", "plu": "1018610"}, {"sku": "FWCM01-RS04", "desc": "FWEE PUDDING POT RS04 MEMORIES", "plu": "1018611"}, {"sku": "FWCM01-BS02", "desc": "FWEE PUDDING POT BS02 INTO", "plu": "1018612"}, {"sku": "FWCM01-BS05", "desc": "FWEE PUDDING POT BS05 WAVY", "plu": "1018613"}, {"sku": "FWCM02-LG04", "desc": "FWEE VOL GLOSS A04 AENGDU", "plu": "1018614"}, {"sku": "FWCM02-LG05", "desc": "FWEE VOL GLOSS A05 CURRANT", "plu": "1018615"}, {"sku": "FWCM02-LG06", "desc": "FWEE VOL GLOSS A06 SCOTCH", "plu": "1018617"}, {"sku": "FWCM02-BG04", "desc": "FWEE VOL GLOSS B04 AENGDU", "plu": "1018618"}, {"sku": "FWCM02-BG05", "desc": "FWEE VOL GLOSS B05 CURRANT", "plu": "1018619"}, {"sku": "FWCM02-BG06", "desc": "FWEE VOL GLOSS B06 SCOTCH", "plu": "1018620"}, {"sku": "FWCM03-CBP01", "desc": "FWEE MELLOW BLUSH PK01", "plu": "1018621"}, {"sku": "FWCM03-CBP02", "desc": "FWEE MELLOW BLUSH PK02", "plu": "1018622"}, {"sku": "FWCM03-CBR01", "desc": "FWEE MELLOW BLUSH RD01", "plu": "1018623"}, {"sku": "FWCM03-CBR02", "desc": "FWEE MELLOW BLUSH RD02", "plu": "1018624"}, {"sku": "FWCM03-CBS01", "desc": "FWEE MELLOW BLUSH RS01", "plu": "1018625"}, {"sku": "FWCM03-CBS02", "desc": "FWEE MELLOW BLUSH RS02", "plu": "1018626"}, {"sku": "FWM04-CU01", "desc": "FWEE CUSHION 01 FAIR GLASS", "plu": "1018627"}, {"sku": "FWM04-CU15", "desc": "FWEE CUSHION 1.5 PEACH GLASS", "plu": "1018629"}, {"sku": "FWM04-CU02", "desc": "FWEE CUSHION 02 NUDE GLASS", "plu": "1018630"}, {"sku": "FWM04-CU03", "desc": "FWEE CUSHION 03 NATURAL GLASS", "plu": "1018631"}, {"sku": "FWCM10-HL03", "desc": "FWEE GLITZ HIGHLIGHTER HL03", "plu": "1018632"}, {"sku": "FWCM10-HL04", "desc": "FWEE GLITZ HIGHLIGHTER HL04", "plu": "1018633"}, {"sku": "FWCM10-HL06", "desc": "FWEE GLITZ HIGHLIGHTER HL06", "plu": "1018634"}, {"sku": "FWCM10-HL07", "desc": "FWEE GLITZ HIGHLIGHTER HL07", "plu": "1018635"}, {"sku": "FWCM10-HL09", "desc": "FWEE GLITZ HIGHLIGHTER HL09", "plu": "1018636"}, {"sku": "FWCM10-HL12", "desc": "FWEE GLITZ HIGHLIGHTER HL12", "plu": "1018616"}], "Dr.CPU": [{"sku": "CPUS02-APH", "desc": "Pdrn+Hyaluronic Booster Ampoule", "plu": "1026103"}, {"sku": "CPUS02-AVG", "desc": "Vitamin+Glutathione Booster Ampoule", "plu": "1026102"}, {"sku": "CPUS02-ACP", "desc": "Cica+Panthenol Booster Ampoule", "plu": "1026104"}, {"sku": "CPUS02-APS", "desc": "Petide+spicule Booster Ampoule", "plu": "1026105"}, {"sku": "CPUC04-OC150", "desc": "Deep Clean Canola Cleansing Oil", "plu": "1026106"}, {"sku": "CPUC04-PW", "desc": "Deep Clean Enzyme Power Wash", "plu": "1026107"}], "DERMABLOCK": [{"sku": "DRBSM04-SC", "desc": "DERMABLOCK DAILY SUN CREAM", "plu": "1025982"}, {"sku": "DRBSM01-SC", "desc": "DERMABLOCK TONE UP SUN CREAM", "plu": "1025975"}, {"sku": "DRBSM03-SC", "desc": "DERMABLOCK AQUA SUN CREAM", "plu": "1025979"}, {"sku": "DRBSM02-SC", "desc": "DERMABLOCK BB SUN CREAM", "plu": "1025976"}, {"sku": "DRBSM05-ST", "desc": "DERMABLOCK MILD SUN STICK", "plu": "1025977"}], "SON&PARK ARTI": [{"sku": "SonCM28-B01", "desc": "ARTI SPREAD COLOR BALM 01 SUNSET", "plu": "1026218"}, {"sku": "SonCM28-B02", "desc": "ARTI SPREAD COLOR BALM 02 PEONY", "plu": "1026207"}, {"sku": "SonCM28-B03", "desc": "ARTI SPREAD COLOR BALM 03 MELLOW", "plu": "1026219"}, {"sku": "SonCM28-B04", "desc": "ARTI SPREAD COLOR BALM 04 HEARTY", "plu": "1026220"}, {"sku": "SonCM28-B05", "desc": "ARTI SPREAD COLOR BALM 05 POMELO", "plu": "1026224"}, {"sku": "SonCM28-BR01", "desc": "ARTI SPREAD BLUR BALM 01 SUNSET", "plu": "1026215"}, {"sku": "SonCM28-BR02", "desc": "ARTI SPREAD BLUR BALM 02 PEONY", "plu": "1026205"}, {"sku": "SonCM28-BR03", "desc": "ARTI SPREAD BLUR BALM 03 MELLOW", "plu": "1026206"}, {"sku": "SonCM28-BR04", "desc": "ARTI SPREAD BLUR BALM 04 POPPY", "plu": "1026216"}, {"sku": "SonCM28-BR05", "desc": "ARTI SPREAD BLUR BALM 05 MAUVE", "plu": "1026217"}, {"sku": "SonCM28-SP01", "desc": "ARTI SPREAD SPARKLE BALM 01 BARE", "plu": "1026225"}, {"sku": "SonCM28-SP02", "desc": "ARTI SPREAD SPARKLE BALM 02 FLARE", "plu": "1026226"}, {"sku": "SonCM28-SP03", "desc": "ARTI SPREAD SPARKLE BALM 03 HALO", "plu": "1026227"}, {"sku": "SonCM28-CBA01", "desc": "ARTI SPREAD HIGHLIGHTER BALM 01 CLEAR", "plu": "1026228"}, {"sku": "SonCM28-CBA02", "desc": "ARTI SPREAD HIGHLIGHTER BALM 02 SUNRISE", "plu": "1026229"}, {"sku": "SonCM28-CBA03", "desc": "ARTI SPREAD HIGHLIGHTER BALM 03 MOONRISE", "plu": "1026230"}, {"sku": "SonCM29-LA01", "desc": "ARTI SHINE LIP PLUMPER 01 PEARL CLEAR", "plu": "1026231"}, {"sku": "SonCM29-LA02", "desc": "ARTI SHINE LIP PLUMPER 02 MOOD BLACK", "plu": "1026232"}], "A.SOLUTION": [{"sku": "ASOLC01-FH", "desc": "asolution_Heartleaf Trouble Cleansing Foam_150g", "plu": "1026163"}, {"sku": "ASOLS01-T", "desc": "asolution_Heartleaf Trouble Toner_150ml", "plu": "1026115"}, {"sku": "ASOLS01-TH", "desc": "asolution_Heartleaf Trouble Toner Pad_12ml(4pads)", "plu": "1026116"}, {"sku": "ASOLS01-SH", "desc": "asolution_Heartleaf Calamine Calming Tok Serum_30ml", "plu": "1026117"}, {"sku": "ASOLS01-AH", "desc": "asolution_Heartleaf Calamine Calming Kok Spot_10ml", "plu": "1026081"}, {"sku": "ASOLS01-CH", "desc": "asolution_Heartleaf Calamine Calming Cream_50ml", "plu": "1026159"}, {"sku": "ASOLP01-PK", "desc": "asolution_Heartleaf Calamine Quick Calming Pack_25ml", "plu": "1026082"}], "Two Edit": [{"sku": "TEDCM01-IL01", "desc": "Two Edit Making Eye Liner 1 BLACK", "plu": "1026005"}, {"sku": "TEDCM01-IL02", "desc": "Two Edit Making Eye Liner 2 BURNT BROWN", "plu": "1026006"}, {"sku": "TEDCM01-IL03", "desc": "Two Edit Making Eye Liner 3 UNDER BROWN", "plu": "1026014"}, {"sku": "TEDCM01-IL04", "desc": "Two Edit Making Eye Liner 4 WARM SALMON", "plu": "1026061"}, {"sku": "TEDCM01-IL05", "desc": "Two Edit Making Eye Liner 5 COOL MAUVE", "plu": "1026071"}, {"sku": "TEDCM01-IB01", "desc": "Two Edit Easy Drawing Eye Brow 1 GRAY BROWN", "plu": "1026072"}, {"sku": "TEDCM01-IB02", "desc": "Two Edit Easy Drawing Eye Brow 2 DARK BROWN", "plu": "1026073"}, {"sku": "TEDCM01-IB03", "desc": "Two Edit Easy Drawing Eye Brow 3 SOFT BROWN", "plu": "1026074"}, {"sku": "TEDCM01-IS01", "desc": "Two Edit Touch up Stick Eye Shadow 1 CHAMPAGNE BEIGE", "plu": "1026002"}, {"sku": "TEDCM01-IS02", "desc": "Two Edit Touch up Stick Eye Shadow 2 PINK", "plu": "1026003"}, {"sku": "TEDCM01-IS03", "desc": "Two Edit Touch up Stick Eye Shadow 3 CORAL", "plu": "1026004"}, {"sku": "TEDCM02-LC01", "desc": "Two Edit Multi Stick Lip & Cheek 1 SALMON", "plu": "1026018"}, {"sku": "TEDCM02-LC02", "desc": "Two Edit Multi Stick Lip & Cheek 2 SOFT PINK", "plu": "1026019"}, {"sku": "TEDCM02-LC03", "desc": "Two Edit Multi Stick Lip & Cheek 3 ROSE", "plu": "1026020"}, {"sku": "TEDCM03-LT01", "desc": "Two Edit Voluming Tint 1 APRICOT", "plu": "1026021"}, {"sku": "TEDCM03-LT02", "desc": "Two Edit Voluming Tint 2 FIG", "plu": "1026022"}, {"sku": "TEDCM03-LT03", "desc": "Two Edit Voluming Tint 3 BERRY", "plu": "1026023"}, {"sku": "TEDCM04-SS01", "desc": "Two Edit Multi Stick Shading 1 WARM STEP", "plu": "1026024"}, {"sku": "TEDCM04-SS02", "desc": "Two Edit Multi Stick Shading 2 COOL STEP", "plu": "1026029"}, {"sku": "TEDCM05-SH01", "desc": "Two Edit Multi Stick Highlighter 1 VEIL", "plu": "1026030"}, {"sku": "TEDCM05-SH02", "desc": "Two Edit Multi Stick Highlighter 2 PINK", "plu": "1026031"}, {"sku": "TEDM06-CR01", "desc": "Two Edit Skin Cover Concealer Palette 1 COVER", "plu": "1026032"}, {"sku": "TEDM06-CR02", "desc": "Two Edit Skin Cover Concealer Palette 2 CORRECTING", "plu": "1026033"}, {"sku": "TEDM07-PP01", "desc": "Two Edit Powder Pact 1 PINK", "plu": "1026000"}, {"sku": "TEDM07-PP02", "desc": "Two Edit Powder Pact 2 WHITE", "plu": "1026001"}], "Point": [{"sku": "PIC01-FDR", "desc": "Point Deep Clean Whip Cleansing Foam 100G", "plu": "1025545"}, {"sku": "PIC01-CPD", "desc": "Point Deep Clean Cleansing Tissue 30 Sheets", "plu": "1025546"}, {"sku": "PIC01-OCD", "desc": "Point Deep Clean Cleansing Oil 100ML", "plu": "1025550"}, {"sku": "PIC03-LI", "desc": "Point Lemon Carbonated Water Makeup Remover 150ML", "plu": "1025551"}, {"sku": "PIC03-LIP", "desc": "Point Lemon Carbonated Makeup Remover Pad 35 Sheets", "plu": "1025552"}, {"sku": "PIC03-SC_Pl", "desc": "Point Lemon Carbonated Water Peeling Gel 100ML", "plu": "1025942"}, {"sku": "NEW", "desc": "POINT_Rice Deep Melting Cleansing Balm_60g", "plu": "5028158"}, {"sku": "NEW", "desc": "POINT_Rice Soothing Cleansing Milk_140ml", "plu": "5028160"}, {"sku": "NEW", "desc": "POINT_Rice Chewy&Pure Cleansing Foam_80g", "plu": "5028157"}, {"sku": "NEW", "desc": "POINT_Rice Triple Glow Pack Cleanser_100g", "plu": "5028159"}], "milktouch": [{"sku": "MTCM3-K01", "desc": "dearthing Ultra Long Curling Mascare 01 Clear Black", "plu": "1029192"}, {"sku": "MTCM3-K02", "desc": "dearthing Ultra Long Curling Mascare 02 Mute Brown", "plu": "1029197"}, {"sku": "MTCM3-P1", "desc": "dearthing Blurry Effect Smooth Touch Pot 01 Soft Baby", "plu": "1029190"}, {"sku": "MTCM3-P2", "desc": "dearthing Blurry Effect Smooth Touch Pot 02 Mute Memory", "plu": "1029193"}, {"sku": "MTCM3-P3", "desc": "dearthing Blurry Effect Smooth Touch Pot 03 Spring Fever", "plu": "1029191"}, {"sku": "MTCM3-P4", "desc": "dearthing Blurry Effect Smooth Touch Pot 04 Berry Crush", "plu": "1029194"}, {"sku": "MTCM3-P5", "desc": "dearthing Blurry Effect Smooth Touch Pot 05 Winter Mocha", "plu": "1029195"}, {"sku": "MTCM3-LP01", "desc": "dearthing Glow Effect Lip Plumper 01 Clear Maxi", "plu": "1029196"}, {"sku": "MTCM3-LP02", "desc": "dearthing Glow Effect Lip Plumper 02 Aurora Beam", "plu": "1029188"}, {"sku": "MTCM3-LP03", "desc": "dearthing Glow Effect Lip Plumper 03 Pink Beam", "plu": "1029189"}], "DROP BE": [{"sku": "DBECM01-CB01", "desc": "Drop Be By THE SAEM Colors Stick 01 Glow Champagnebeam", "plu": "1030580"}, {"sku": "DBECM01-CB02", "desc": "Drop Be By THE SAEM Colors Stick 02 Blusher Peachmoon", "plu": "1030581"}, {"sku": "DBECM01-CB03", "desc": "Drop Be By THE SAEM Colors Stick 03 Blusher Rosyberry", "plu": "1030582"}, {"sku": "DBECM01-CB04", "desc": "Drop Be By THE SAEM Colors Stick 04 BRONZER", "plu": "1030583"}, {"sku": "DBEM01-CRE01", "desc": "Drop Be By THE SAEM Colors Eye Cealer Stkick 01 Fair Peach", "plu": "1030567"}, {"sku": "DBEM01-CRE02", "desc": "Drop Be By THE SAEM Colors Eye Cealer Stkick 02 Neutral Peach", "plu": "1030568"}, {"sku": "DBEM01-CR01", "desc": "Drop Be By THE SAEM Colors Conceal Pot 01 White", "plu": "1030584"}, {"sku": "DBEM01-CR02", "desc": "Drop Be By THE SAEM Colors Conceal Pot 02 Pink", "plu": "1030564"}, {"sku": "DBEM01-CR03", "desc": "Drop Be By THE SAEM Colors Conceal Pot 03 Salmon Beige", "plu": "1030565"}, {"sku": "DBEM01-CR04", "desc": "Drop Be By THE SAEM Colors Conceal Pot 04 Cover Beige", "plu": "1030566"}, {"sku": "DBEM01-PR", "desc": "Drop Be By THE SAEM Colors Veil Skin Tone Up Base", "plu": "1030579"}, {"sku": "DBEM01-FD01", "desc": "Drop Be By THE SAEM Cover Pick Foundation Renew 01 Light Beige", "plu": "1030577"}, {"sku": "DBEM01-FD02", "desc": "Drop Be By THE SAEM Cover Pick Foundation Renew 02 Natural Beige", "plu": "1030578"}, {"sku": "DBES02-AP", "desc": "Drop Be By THE SAEM Pore Refining Ampoule", "plu": "1030587"}, {"sku": "DBES02-AB", "desc": "Drop Be By THE SAEM Blemish Soothing Ampoule", "plu": "1030585"}, {"sku": "DBES02-AG", "desc": "Drop Be By THE SAEM Glow Enhancing Ampoule", "plu": "1030586"}]};
 
 // ============ STATE ============
 let records = [];
@@ -1408,7 +1433,7 @@ let cloudName = CLOUDINARY_CLOUD;
 let uploadPreset = CLOUDINARY_PRESET;
 
 let pendingPhotos = []; // {dataUrl, file, name, brands:[]}
-let selectedTypes = []; // multi-select
+let selectedType = '';
 let editingProjectId = null;
 let shareParams = {};
 
@@ -1420,15 +1445,12 @@ document.getElementById('cfg-preset').value = uploadPreset;
 
 // Check if share view
 const urlParams = new URLSearchParams(window.location.search);
-(async () => {
-  await loadSettings();
-  buildOutletIndex();
-  if (urlParams.has('share')) {
-    initShareView(urlParams);
-  } else {
-    await populateAllSelects();
-  }
-})();
+if (urlParams.has('share')) {
+  initShareView(urlParams);
+} else {
+  populateAllSelects();
+  renderSettings();
+}
 
 // ============ PAGES ============
 function showPage(p, el) {
@@ -1436,22 +1458,31 @@ function showPage(p, el) {
   document.querySelectorAll('.nav-tab').forEach(x=>x.classList.remove('active'));
   document.getElementById('page-'+p).classList.add('active');
   if(el) el.classList.add('active');
-  if(p==='records'){renderStats();renderRecords();populateFilterSelects();}
+  if(p==='records'){
+    renderStats();
+    // Load stock records for badge display
+    sbGet('stock_counts').then(d=>{ stockRecords=d||[]; renderRecords(); });
+    populateFilterSelects();
+  }
   if(p==='projects') renderProjects();
   if(p==='report'){populateReportSelects();renderReport();}
   if(p==='settings') renderSettings();
+  if(p==='stock') { initStockPage(); }
+  if(p==='stock-history') { initStockHistory(); }
 }
 
 // ============ SELECTS ============
 function buildOutletIndex() {
-  // Build searchable outlet list
   window._outletList = outlets.slice().sort((a,b)=>{
     if(a.chain!==b.chain) return a.chain.localeCompare(b.chain);
     return a.name.localeCompare(b.name);
   });
 }
 
-function showOutletDropdown() {
+async function showOutletDropdown() {
+  if (!window._outletList || !window._outletList.length) {
+    await loadSettings(); buildOutletIndex();
+  }
   filterOutlets(document.getElementById('outlet-search').value);
   document.getElementById('outlet-dropdown').style.display='block';
   document.addEventListener('click', hideOutletDropdown, {once:true, capture:true});
@@ -1460,23 +1491,20 @@ function showOutletDropdown() {
 function hideOutletDropdown(e) {
   const dd = document.getElementById('outlet-dropdown');
   const inp = document.getElementById('outlet-search');
-  if (dd && !dd.contains(e.target) && e.target!==inp) {
-    dd.style.display='none';
-  }
+  if (dd && !dd.contains(e.target) && e.target!==inp) dd.style.display='none';
 }
 
 function filterOutlets(q) {
   const dd = document.getElementById('outlet-dropdown');
   if (!window._outletList) buildOutletIndex();
   const list = window._outletList;
-  const filtered = q.length<1 ? list : list.filter(o=>o.name.toLowerCase().includes(q.toLowerCase())||o.chain.toLowerCase().includes(q.toLowerCase()));
+  const filtered = !q ? list : list.filter(o=>o.name.toLowerCase().includes(q.toLowerCase())||o.chain.toLowerCase().includes(q.toLowerCase()));
   if (!filtered.length) { dd.innerHTML='<div style="padding:10px;color:var(--muted);font-size:13px">No outlets found</div>'; dd.style.display='block'; return; }
-  // Group by chain
   const groups={};
   filtered.forEach(o=>{if(!groups[o.chain])groups[o.chain]=[];groups[o.chain].push(o.name);});
   dd.innerHTML = Object.entries(groups).sort().map(([chain,names])=>`
     <div style="padding:6px 12px 2px;font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--accent);text-transform:uppercase;background:var(--surface2)">${chain}</div>
-    ${names.map(n=>`<div class="outlet-opt" onclick="selectOutlet('${n.replace(/'/g,"\'")}','${chain.replace(/'/g,"\'")}')" style="padding:9px 14px;font-size:13px;cursor:pointer;border-bottom:1px solid var(--border)">${n}</div>`).join('')}
+    ${names.map(n=>`<div class="outlet-opt" onclick="selectOutlet('${n.replace(/'/g,"\'")}')" style="padding:9px 14px;font-size:13px;cursor:pointer;border-bottom:1px solid var(--border)">${n}</div>`).join('')}
   `).join('');
   dd.style.display='block';
   dd.querySelectorAll('.outlet-opt').forEach(el=>{
@@ -1485,15 +1513,16 @@ function filterOutlets(q) {
   });
 }
 
-function selectOutlet(name, chain) {
+function selectOutlet(name) {
   document.getElementById('outlet').value = name;
   document.getElementById('outlet-search').value = name;
   document.getElementById('outlet-dropdown').style.display='none';
 }
 
 async function populateAllSelects() {
+  // Build outlet search index
   buildOutletIndex();
-  // Clear outlet search
+  // Clear outlet search field
   const oSearch = document.getElementById('outlet-search');
   if (oSearch) { oSearch.value=''; document.getElementById('outlet').value=''; }
   // Brand dropdown
@@ -1509,30 +1538,27 @@ async function populateAllSelects() {
     pSel.innerHTML = '<option value="">No project</option>'+projects.filter(p=>p.status!=='Completed').map(p=>`<option value="${p.id}">${p.name}</option>`).join('');
   } catch(e) { pSel.innerHTML = '<option value="">No project</option>'; }
   // Proj brand modal
-  const _bn = brands.map(b=>typeof b==='object'?b.name:b);
-  document.getElementById('proj-brand').innerHTML = '<option value="">All / General</option>'+_bn.map(b=>`<option>${b}</option>`).join('');
+  document.getElementById('proj-brand').innerHTML = '<option value="">All / General</option>'+brands.map(b=>`<option>${b}</option>`).join('');
   // Update photo taggers
   renderPhotoTagger();
 }
 
 function populateFilterSelects() {
-  const brandNames = brands.map(b=>typeof b==='object'?b.name:b);
-  document.getElementById('f-brand').innerHTML = '<option value="">All Brands</option>'+brandNames.map(b=>`<option>${b}</option>`).join('');
+  document.getElementById('f-brand').innerHTML = '<option value="">All Brands</option>'+brands.map(b=>`<option>${b}</option>`).join('');
   const usedOutlets = [...new Set(records.map(r=>r.outlet))].sort();
   document.getElementById('f-outlet').innerHTML = '<option value="">All Outlets</option>'+usedOutlets.map(o=>`<option>${o}</option>`).join('');
 }
 
 function populateReportSelects() {
-  const brandNames = brands.map(b=>typeof b==='object'?b.name:b);
-  document.getElementById('report-brand').innerHTML = '<option value="">All Brands</option>'+brandNames.map(b=>`<option>${b}</option>`).join('');
+  document.getElementById('report-brand').innerHTML = '<option value="">All Brands</option>'+brands.map(b=>`<option>${b}</option>`).join('');
 }
 
 // ============ TYPE ============
-function toggleType(t, el) {
-  const idx = selectedTypes.indexOf(t);
-  if (idx === -1) { selectedTypes.push(t); el.classList.add('selected'); }
-  else { selectedTypes.splice(idx,1); el.classList.remove('selected'); }
-  document.getElementById('project-field').style.display = selectedTypes.includes('Project')?'block':'none';
+function selectType(t,el) {
+  selectedType = t;
+  document.querySelectorAll('.type-card').forEach(b=>b.classList.remove('selected'));
+  el.classList.add('selected');
+  document.getElementById('project-field').style.display = t==='Project'?'block':'none';
 }
 
 // ============ PHOTOS & TAGGING ============
@@ -1556,7 +1582,7 @@ function renderPhotoTagger() {
       <div class="photo-tag-info">
         <div class="photo-tag-name">${p.name}</div>
         <div class="photo-tag-brands">
-          ${brands.map(b=>{const bn=typeof b==='object'?b.name:b;return `<button class="photo-brand-chip ${p.brands.includes(bn)?'selected':''}" onclick="togglePhotoBrand(${i},'${bn}')">${bn}</button>`;}).join('')}
+          ${brands.map(b=>`<button class="photo-brand-chip ${p.brands.includes(b)?'selected':''}" onclick="togglePhotoBrand(${i},'${b}')">${b}</button>`).join('')}
         </div>
       </div>
       <button class="photo-remove" onclick="removePhoto(${i})">✕</button>
@@ -1580,7 +1606,7 @@ async function submitRecord() {
   const notes = document.getElementById('notes').value.trim();
   const projectId = document.getElementById('project-select').value;
 
-  if (!outlet||!date||!selectedTypes.length) return showToast('Please fill outlet, date & type','err');
+  if (!outlet||!date||!selectedType) return showToast('Please fill outlet, date & type','err');
   if (!pendingPhotos.length) return showToast('Please upload at least one photo','err');
 
   const btn = document.getElementById('submit-btn');
@@ -1617,7 +1643,7 @@ async function submitRecord() {
 
   try {
     const result = await sbInsert('records', {
-      outlet, date, merch, type: selectedTypes.join(', '), notes,
+      outlet, date, merch, type: selectedType, notes,
       project_id: projectId||null,
       brands: allBrands,
       photos: uploadedPhotos
@@ -1636,13 +1662,14 @@ async function submitRecord() {
 
 function resetUploadForm() {
   document.getElementById('outlet').value='';
+  const _os = document.getElementById('outlet-search'); if(_os) _os.value='';
   document.getElementById('visit-date').value=new Date().toISOString().split('T')[0];
   document.getElementById('merch-name').value='';
   document.getElementById('notes').value='';
   document.getElementById('project-field').style.display='none';
   document.getElementById('project-select').value='';
   document.querySelectorAll('.type-card').forEach(b=>b.classList.remove('selected'));
-  selectedTypes=[];
+  selectedType='';
   pendingPhotos=[];
   renderPhotoTagger();
 }
@@ -1713,6 +1740,7 @@ function renderRecords() {
         <span class="record-outlet">${r.outlet}</span>
         <span class="badge ${typeBadge[r.type]||'badge-purple'}">${r.type}</span>
         ${proj?`<span class="badge badge-green">📌 ${proj.name}</span>`:''}
+        ${getStockBadge(r.outlet, r.date)}
       </div>
       <div class="record-sub">🏷️ ${(r.brands||[]).join(', ')||'—'}${r.merch?' · 👤 '+r.merch:''}</div>
       <div class="record-meta"><span>📅 ${r.date}</span><span>🖼️ ${r.photos.length} photo${r.photos.length>1?'s':''}</span></div>
@@ -1774,8 +1802,7 @@ async function renderProjects() {
 
 function openProjectModal(id=null) {
   editingProjectId = id;
-  const _bn = brands.map(b=>typeof b==='object'?b.name:b);
-  document.getElementById('proj-brand').innerHTML = '<option value="">All / General</option>'+_bn.map(b=>`<option>${b}</option>`).join('');
+  document.getElementById('proj-brand').innerHTML = '<option value="">All / General</option>'+brands.map(b=>`<option>${b}</option>`).join('');
   if (id) {
     const p = projects.find(x=>x.id===id);
     document.getElementById('proj-modal-title').textContent='Edit Project';
@@ -1846,6 +1873,55 @@ async function renderReport() {
       <div class="brand-outlets">${[...d.outlets].join(' · ')}</div>
       <div style="margin-top:4px;font-size:11px;color:var(--muted)">${Object.entries(d.types).map(([t,n])=>`${t}: ${n}`).join(' · ')}</div>
     </div>`).join('')}</div>`;
+
+  // Stock summary
+  try {
+    const stockData = await sbGet('stock_counts');
+    const filterBrandVal = document.getElementById('report-brand').value;
+    if (stockData && stockData.length) {
+      let sf = stockData;
+      if (days!=='all') { const c=new Date(); c.setDate(c.getDate()-parseInt(days)); sf=stockData.filter(r=>new Date(r.date)>=c); }
+      const skuMap = {};
+      sf.forEach(r=>{
+        (r.entries||[]).forEach(e=>{
+          if (filterBrandVal && e.brand!==filterBrandVal) return;
+          if (!skuMap[e.brand]) skuMap[e.brand]={};
+          if (!skuMap[e.brand][e.sku]) skuMap[e.brand][e.sku]={desc:e.desc,plu:e.plu,outlets:{}};
+          const ex=skuMap[e.brand][e.sku].outlets[r.outlet];
+          if (!ex||r.date>ex.date) skuMap[e.brand][e.sku].outlets[r.outlet]={qty:e.qty,date:r.date};
+        });
+      });
+      const allOutlets=[...new Set(sf.map(r=>r.outlet))].sort();
+      const brandKeys=Object.keys(skuMap).sort();
+      if (brandKeys.length) {
+        var summaryHtml = '<div style="font-size:14px;font-weight:700;margin-bottom:10px">📦 Stock Summary (Latest)</div>';
+        brandKeys.forEach(function(br) {
+          var skus = Object.entries(skuMap[br]);
+          var headerCells = '<th style="padding:5px 8px;text-align:left;color:var(--muted);font-weight:600;min-width:160px">Description</th>';
+          allOutlets.forEach(function(o) {
+            headerCells += '<th style="padding:5px 8px;text-align:center;color:var(--muted);font-weight:600;white-space:nowrap;font-size:10px">'+o.replace(/^Watson /i,'')+'</th>';
+          });
+          var bodyRows = '';
+          skus.forEach(function(skuEntry) {
+            var sku = skuEntry[0], data = skuEntry[1];
+            var cells = '<td style="padding:5px 8px;color:var(--text);font-size:11px">'+data.desc+'</td>';
+            allOutlets.forEach(function(o) {
+              var en = data.outlets[o];
+              if (!en) { cells += '<td style="padding:5px 8px;text-align:center;color:var(--border)">—</td>'; }
+              else { cells += '<td style="padding:5px 8px;text-align:center;font-weight:700;color:var(--text)">'+en.qty+'</td>'; }
+            });
+            bodyRows += '<tr style="border-bottom:1px solid var(--border)">'+cells+'</tr>';
+          });
+          summaryHtml += '<div class="brand-row" style="margin-bottom:8px">' +
+            '<div class="brand-name" style="margin-bottom:8px">'+br+'</div>' +
+            '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11px">' +
+            '<tr style="background:var(--surface2)">'+headerCells+'</tr>' +
+            bodyRows + '</table></div></div>';
+        });
+        document.getElementById('stock-summary-section').innerHTML = summaryHtml;
+      } else document.getElementById('stock-summary-section').innerHTML='';
+    } else document.getElementById('stock-summary-section').innerHTML='';
+  } catch(e) { console.log('stock err',e); }
 }
 
 function exportCSV() {
@@ -1858,8 +1934,7 @@ function exportCSV() {
 
 // ============ SHARE ============
 function openShareModal() {
-  const _sbn = brands.map(b=>typeof b==='object'?b.name:b);
-  document.getElementById('share-brand').innerHTML='<option value="">All Brands</option>'+_sbn.map(b=>`<option>${b}</option>`).join('');
+  document.getElementById('share-brand').innerHTML='<option value="">All Brands</option>'+brands.map(b=>`<option>${b}</option>`).join('');
   const usedOutlets=[...new Set(records.map(r=>r.outlet))].sort();
   document.getElementById('share-outlet').innerHTML='<option value="">All Outlets</option>'+usedOutlets.map(o=>`<option>${o}</option>`).join('');
   document.getElementById('share-link-box').style.display='none';
@@ -1977,72 +2052,30 @@ async function downloadAllVisible() {
 }
 
 // ============ SETTINGS ============
-async function renderSettings() {
-  await reloadSettings();
-  document.getElementById('outlets-list').innerHTML=outlets.map((o)=>`
+function renderSettings() {
+  document.getElementById('outlets-list').innerHTML=outlets.map((o,i)=>`
     <div class="settings-item">
       <div><div class="settings-item-name">${o.name}</div><div style="font-size:11px;color:var(--muted)">${o.chain}</div></div>
-      <button class="btn btn-sm btn-danger" onclick="removeOutlet(${o.id})">Remove</button>
+      <button class="btn btn-sm btn-danger" onclick="removeOutlet(${i})">Remove</button>
     </div>`).join('');
   document.getElementById('brands-list').innerHTML=brands.map((b,i)=>`
     <div class="settings-item">
-      <div class="settings-item-name">${typeof b==='object'?b.name:b}</div>
-      <button class="btn btn-sm btn-danger" onclick="removeBrand(${typeof b==='object'?b.id:i})">Remove</button>
+      <div class="settings-item-name">${b}</div>
+      <button class="btn btn-sm btn-danger" onclick="removeBrand(${i})">Remove</button>
     </div>`).join('');
   document.getElementById('merch-list').innerHTML=merchs.map((m,i)=>`
     <div class="settings-item">
-      <div class="settings-item-name">${typeof m==='object'?m.name:m}</div>
-      <button class="btn btn-sm btn-danger" onclick="removeMerch(${typeof m==='object'?m.id:i})">Remove</button>
+      <div class="settings-item-name">${m}</div>
+      <button class="btn btn-sm btn-danger" onclick="removeMerch(${i})">Remove</button>
     </div>`).join('');
 }
 
-async function addOutlet(){
-  const chain=document.getElementById('new-outlet-chain').value.trim();
-  const name=document.getElementById('new-outlet-name').value.trim();
-  if(!name)return showToast('Enter outlet name','err');
-  try {
-    const res = await sbAddSetting('settings_outlets',{chain:chain||'Other',name});
-    outlets.push({chain:chain||'Other',name,id:res[0]?.id});
-    document.getElementById('new-outlet-chain').value='';
-    document.getElementById('new-outlet-name').value='';
-    buildOutletIndex(); renderSettings(); populateAllSelects(); showToast('Outlet added');
-  } catch(e){ showToast('Failed to add outlet','err'); }
-}
-async function removeOutlet(id){
-  try { await sbDeleteSetting('settings_outlets',id); await reloadSettings(); buildOutletIndex(); renderSettings(); populateAllSelects(); }
-  catch(e){ showToast('Failed','err'); }
-}
-async function addBrand(){
-  const b=document.getElementById('new-brand').value.trim();
-  if(!b)return showToast('Enter brand name','err');
-  const names=brands.map(x=>typeof x==='object'?x.name:x);
-  if(names.includes(b))return showToast('Already exists','err');
-  try {
-    const res=await sbAddSetting('settings_brands',{name:b});
-    brands.push(b); document.getElementById('new-brand').value='';
-    renderSettings(); populateAllSelects(); showToast('Brand added');
-  } catch(e){ showToast('Failed','err'); }
-}
-async function removeBrand(id){
-  try { await sbDeleteSetting('settings_brands',id); await reloadSettings(); renderSettings(); populateAllSelects(); }
-  catch(e){ showToast('Failed','err'); }
-}
-async function addMerch(){
-  const m=document.getElementById('new-merch').value.trim();
-  if(!m)return showToast('Enter name','err');
-  try {
-    await sbAddSetting('settings_merchs',{name:m});
-    merchs.push(m); document.getElementById('new-merch').value='';
-    renderSettings(); populateAllSelects(); showToast('Team member added');
-  } catch(e){ showToast('Failed','err'); }
-}
-async function removeMerch(id){
-  try { await sbDeleteSetting('settings_merchs',id); await reloadSettings(); renderSettings(); populateAllSelects(); }
-  catch(e){ showToast('Failed','err'); }
-}
-async function reloadSettings(){
-  await loadSettings(); buildOutletIndex();
-}
+function addOutlet(){const chain=document.getElementById('new-outlet-chain').value.trim(),name=document.getElementById('new-outlet-name').value.trim();if(!name)return showToast('Enter outlet name','err');outlets.push({chain:chain||'Other',name});document.getElementById('new-outlet-chain').value='';document.getElementById('new-outlet-name').value='';save();renderSettings();populateAllSelects();showToast('Outlet added');}
+function removeOutlet(i){outlets.splice(i,1);save();renderSettings();populateAllSelects();}
+function addBrand(){const b=document.getElementById('new-brand').value.trim();if(!b)return showToast('Enter brand name','err');if(brands.includes(b))return showToast('Already exists','err');brands.push(b);document.getElementById('new-brand').value='';save();renderSettings();populateAllSelects();showToast('Brand added');}
+function removeBrand(i){brands.splice(i,1);save();renderSettings();populateAllSelects();}
+function addMerch(){const m=document.getElementById('new-merch').value.trim();if(!m)return showToast('Enter name','err');merchs.push(m);document.getElementById('new-merch').value='';save();renderSettings();populateAllSelects();showToast('Team member added');}
+function removeMerch(i){merchs.splice(i,1);save();renderSettings();populateAllSelects();}
 function saveConfig(){cloudName=document.getElementById('cfg-cloud').value.trim();uploadPreset=document.getElementById('cfg-preset').value.trim();localStorage.setItem('skmy_cloud',cloudName);localStorage.setItem('skmy_preset',uploadPreset);showToast('Config saved');}
 async function clearAllData(){
   if(!confirm('Delete ALL records? This cannot be undone.'))return;
@@ -2064,6 +2097,428 @@ function save(){
   localStorage.setItem('skmy_outlets',JSON.stringify(outlets));
   localStorage.setItem('skmy_brands',JSON.stringify(brands));
   localStorage.setItem('skmy_merchs',JSON.stringify(merchs));
+}
+
+
+// ============ STOCK COUNT ============
+let selectedStockBrands = [];
+let stockEntries = {}; // brand -> {sku -> qty}
+
+async function initStockPage() {
+  // Set date
+  document.getElementById('stock-date').value = new Date().toISOString().split('T')[0];
+  
+  // Make sure outlets are loaded from Supabase
+  if (!window._outletList || !window._outletList.length) {
+    await loadSettings();
+    buildOutletIndex();
+  }
+
+  // Populate merch
+  const mSel = document.getElementById('stock-merch');
+  mSel.innerHTML = '<option value="">Select...</option>' + merchs.map(m=>`<option>${typeof m==='object'?m.name:m}</option>`).join('');
+  
+  // Populate brand chips
+  const brandNames = Object.keys(PRODUCT_LIST);
+  document.getElementById('stock-brand-select').innerHTML = brandNames.map(b=>`
+    <button class="brand-chip ${selectedStockBrands.includes(b)?'selected':''}" onclick="toggleStockBrand('${b}')">${b}</button>
+  `).join('');
+  renderStockSKUs();
+}
+
+function toggleStockBrand(brand) {
+  const idx = selectedStockBrands.indexOf(brand);
+  if (idx === -1) selectedStockBrands.push(brand);
+  else selectedStockBrands.splice(idx, 1);
+  // Update chip UI
+  document.querySelectorAll('#stock-brand-select .brand-chip').forEach(el => {
+    el.classList.toggle('selected', selectedStockBrands.includes(el.textContent));
+  });
+  renderStockSKUs();
+}
+
+function renderStockSKUs() {
+  const section = document.getElementById('stock-sku-section');
+  if (!selectedStockBrands.length) { section.innerHTML = ''; return; }
+  section.innerHTML = selectedStockBrands.map(brand => {
+    const skus = PRODUCT_LIST[brand] || [];
+    if (!stockEntries[brand]) stockEntries[brand] = {};
+    return `<div class="card">
+      <div class="card-title">${brand}</div>
+      <div style="display:flex;flex-direction:column;gap:6px">
+        ${skus.map(s => `
+          <div style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)">
+            <div style="flex:1;min-width:0">
+              <div style="font-size:12px;font-weight:500;color:var(--text)">${s.desc}</div>
+              <div style="font-size:10px;color:var(--muted)">${s.sku} · PLU: ${s.plu}</div>
+            </div>
+            <input type="number" min="0" placeholder="0"
+              value="${stockEntries[brand][s.sku]||''}"
+              onchange="setStockQty('${brand}','${s.sku}',this.value)"
+              style="width:70px;text-align:center;padding:7px;background:var(--surface2);border:1px solid var(--border);border-radius:7px;color:var(--text);font-size:14px;font-weight:600">
+          </div>`).join('')}
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function setStockQty(brand, sku, val) {
+  if (!stockEntries[brand]) stockEntries[brand] = {};
+  if (val === '' || val === null) delete stockEntries[brand][sku];
+  else stockEntries[brand][sku] = parseInt(val) || 0;
+}
+
+async function submitStock() {
+  const outlet = document.getElementById('stock-outlet').value;
+  const date = document.getElementById('stock-date').value;
+  const merch = document.getElementById('stock-merch').value;
+  if (!outlet || !date) return showToast('Please select outlet and date', 'err');
+  if (!selectedStockBrands.length) return showToast('Please select at least one brand', 'err');
+
+  const btn = document.getElementById('stock-submit-btn');
+  btn.disabled = true; btn.textContent = 'Saving...';
+
+  // Flatten entries
+  const items = [];
+  for (const [brand, skus] of Object.entries(stockEntries)) {
+    for (const [sku, qty] of Object.entries(skus)) {
+      const product = (PRODUCT_LIST[brand]||[]).find(p=>p.sku===sku);
+      items.push({ outlet, date, merch, brand, sku, desc: product?.desc||'', plu: product?.plu||'', qty });
+    }
+  }
+
+  if (!items.length) { showToast('No quantities entered', 'err'); btn.disabled=false; btn.textContent='✅ Submit Stock Count'; return; }
+
+  try {
+    await sbInsert('stock_counts', { outlet, date, merch, entries: items, created_at: new Date().toISOString() });
+    showToast(`✅ Stock count saved! ${items.length} items recorded`);
+    // Reset
+    selectedStockBrands = [];
+    stockEntries = {};
+    document.getElementById('stock-outlet').value = '';
+    document.getElementById('stock-outlet-search').value = '';
+    document.getElementById('stock-merch').value = '';
+    renderStockSKUs();
+    document.getElementById('stock-brand-select').innerHTML = Object.keys(PRODUCT_LIST).map(b=>`
+      <button class="brand-chip" onclick="toggleStockBrand('${b}')">${b}</button>`).join('');
+  } catch(e) { showToast('Failed to save', 'err'); }
+
+  btn.disabled = false; btn.textContent = '✅ Submit Stock Count';
+}
+
+// Stock outlet search
+async function showStockOutletDropdown() {
+  if (!window._outletList || !window._outletList.length) {
+    await loadSettings();
+    buildOutletIndex();
+  }
+  filterStockOutlets(document.getElementById('stock-outlet-search').value);
+  document.getElementById('stock-outlet-dropdown').style.display = 'block';
+  document.addEventListener('click', hideStockOutletDropdown, {once:true, capture:true});
+}
+function hideStockOutletDropdown(e) {
+  const dd = document.getElementById('stock-outlet-dropdown');
+  const inp = document.getElementById('stock-outlet-search');
+  if (dd && !dd.contains(e.target) && e.target!==inp) dd.style.display='none';
+}
+function filterStockOutlets(q) {
+  const dd = document.getElementById('stock-outlet-dropdown');
+  const list = window._outletList || [];
+  const filtered = !q ? list : list.filter(o=>o.name.toLowerCase().includes(q.toLowerCase())||o.chain.toLowerCase().includes(q.toLowerCase()));
+  if (!filtered.length) { dd.innerHTML='<div style="padding:10px;color:var(--muted);font-size:13px">No outlets found</div>'; dd.style.display='block'; return; }
+  const groups={};
+  filtered.forEach(o=>{if(!groups[o.chain])groups[o.chain]=[];groups[o.chain].push(o.name);});
+  dd.innerHTML = Object.entries(groups).sort().map(([chain,names])=>`
+    <div style="padding:6px 12px 2px;font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--accent);text-transform:uppercase;background:var(--surface2)">${chain}</div>
+    ${names.map(n=>`<div class="outlet-opt" onclick="selectStockOutlet('${n.replace(/'/g,"\'")}','${chain.replace(/'/g,"\'")}')" style="padding:9px 14px;font-size:13px;cursor:pointer;border-bottom:1px solid var(--border)">${n}</div>`).join('')}
+  `).join('');
+  dd.style.display='block';
+  dd.querySelectorAll('.outlet-opt').forEach(el=>{
+    el.addEventListener('mouseover',()=>el.style.background='var(--surface2)');
+    el.addEventListener('mouseout',()=>el.style.background='');
+  });
+}
+function selectStockOutlet(name) {
+  document.getElementById('stock-outlet').value = name;
+  document.getElementById('stock-outlet-search').value = name;
+  document.getElementById('stock-outlet-dropdown').style.display = 'none';
+}
+
+// ============ PDF REPORT ============
+async function generatePDF() {
+  // Load jsPDF
+  if (!window.jspdf) {
+    await new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+      s.onload = resolve; s.onerror = reject;
+      document.head.appendChild(s);
+    });
+  }
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+
+  const brand = document.getElementById('report-brand').value || 'All Brands';
+  const days = document.getElementById('report-period').value;
+  const period = days === 'all' ? 'All Time' : `Last ${days} days`;
+
+  // Filter records
+  let filtered = records;
+  if (brand !== 'All Brands') filtered = filtered.filter(r=>(r.brands||[]).includes(brand));
+  if (days !== 'all') { const c=new Date(); c.setDate(c.getDate()-parseInt(days)); filtered=filtered.filter(r=>new Date(r.date)>=c); }
+
+  // === PAGE 1: SUMMARY ===
+  const primaryColor = [124, 106, 247];
+  const darkBg = [15, 15, 19];
+  const textColor = [40, 40, 60];
+
+  // Header bar
+  doc.setFillColor(...primaryColor);
+  doc.rect(0, 0, 210, 28, 'F');
+  doc.setTextColor(255,255,255);
+  doc.setFontSize(18); doc.setFont('helvetica','bold');
+  doc.text('SKMY Merch Tracker', 14, 12);
+  doc.setFontSize(10); doc.setFont('helvetica','normal');
+  doc.text(`Brand Report · ${brand} · ${period}`, 14, 20);
+  doc.text(`Generated: ${new Date().toLocaleDateString('en-MY')}`, 150, 20);
+
+  // Summary stats
+  doc.setTextColor(...textColor);
+  doc.setFontSize(11); doc.setFont('helvetica','bold');
+  doc.text('Summary', 14, 38);
+
+  const stats = [
+    { label: 'Total Visits', value: filtered.length },
+    { label: 'Outlets Covered', value: new Set(filtered.map(r=>r.outlet)).size },
+    { label: 'Total Photos', value: filtered.reduce((s,r)=>s+(r.photos||[]).length,0) },
+    { label: 'This Month', value: filtered.filter(r=>r.date&&r.date.startsWith(new Date().toISOString().slice(0,7))).length },
+  ];
+
+  stats.forEach((s, i) => {
+    const x = 14 + (i * 46);
+    doc.setFillColor(245, 244, 255);
+    doc.roundedRect(x, 42, 42, 22, 3, 3, 'F');
+    doc.setFontSize(18); doc.setFont('helvetica','bold');
+    doc.setTextColor(...primaryColor);
+    doc.text(String(s.value), x+21, 54, {align:'center'});
+    doc.setFontSize(8); doc.setFont('helvetica','normal');
+    doc.setTextColor(100,100,130);
+    doc.text(s.label, x+21, 60, {align:'center'});
+  });
+
+  // Brand breakdown
+  const brandMap = {};
+  filtered.forEach(r => {
+    (r.brands||[]).forEach(b => {
+      if (!brandMap[b]) brandMap[b] = {visits:0, photos:0, outlets:new Set()};
+      brandMap[b].visits++;
+      brandMap[b].photos += (r.photos||[]).length;
+      brandMap[b].outlets.add(r.outlet);
+    });
+  });
+  const brandRows = Object.entries(brandMap).sort((a,b)=>b[1].visits-a[1].visits);
+
+  let y = 74;
+  if (brandRows.length > 0) {
+    doc.setFontSize(11); doc.setFont('helvetica','bold'); doc.setTextColor(...textColor);
+    doc.text('Brand Breakdown', 14, y); y += 6;
+
+    // Table header
+    doc.setFillColor(...primaryColor);
+    doc.rect(14, y, 182, 7, 'F');
+    doc.setTextColor(255,255,255); doc.setFontSize(8); doc.setFont('helvetica','bold');
+    doc.text('Brand', 17, y+5);
+    doc.text('Visits', 120, y+5);
+    doc.text('Photos', 145, y+5);
+    doc.text('Outlets', 170, y+5);
+    y += 7;
+
+    brandRows.forEach(([b, d], i) => {
+      if (y > 270) { doc.addPage(); y = 20; }
+      if (i % 2 === 0) { doc.setFillColor(248,248,255); doc.rect(14, y, 182, 7, 'F'); }
+      doc.setTextColor(...textColor); doc.setFontSize(8); doc.setFont('helvetica','normal');
+      doc.text(b, 17, y+5);
+      doc.text(String(d.visits), 125, y+5);
+      doc.text(String(d.photos), 150, y+5);
+      doc.text(String(d.outlets.size), 175, y+5);
+      y += 7;
+    });
+  }
+
+  // Visit records by outlet
+  y += 8;
+  if (y > 240) { doc.addPage(); y = 20; }
+  doc.setFontSize(11); doc.setFont('helvetica','bold'); doc.setTextColor(...textColor);
+  doc.text('Visit Records', 14, y); y += 6;
+
+  doc.setFillColor(...primaryColor);
+  doc.rect(14, y, 182, 7, 'F');
+  doc.setTextColor(255,255,255); doc.setFontSize(8); doc.setFont('helvetica','bold');
+  doc.text('Date', 17, y+5);
+  doc.text('Outlet', 45, y+5);
+  doc.text('Brands', 110, y+5);
+  doc.text('Type', 155, y+5);
+  doc.text('Pics', 188, y+5);
+  y += 7;
+
+  filtered.slice(0, 80).forEach((r, i) => {
+    if (y > 275) { doc.addPage(); y = 20; }
+    if (i % 2 === 0) { doc.setFillColor(248,248,255); doc.rect(14, y, 182, 6, 'F'); }
+    doc.setTextColor(...textColor); doc.setFontSize(7); doc.setFont('helvetica','normal');
+    doc.text(r.date||'', 17, y+4);
+    doc.text((r.outlet||'').substring(0,30), 45, y+4);
+    doc.text((r.brands||[]).join(', ').substring(0,25), 110, y+4);
+    doc.text((r.type||'').substring(0,18), 155, y+4);
+    doc.text(String((r.photos||[]).length), 190, y+4);
+    y += 6;
+  });
+
+  // Footer
+  const pageCount = doc.getNumberOfPages();
+  for (let i = 1; i <= pageCount; i++) {
+    doc.setPage(i);
+    doc.setFillColor(240,240,250);
+    doc.rect(0, 287, 210, 10, 'F');
+    doc.setFontSize(7); doc.setTextColor(120,120,150);
+    doc.text(`SKMY Merch Tracker · Confidential · Page ${i} of ${pageCount}`, 105, 293, {align:'center'});
+  }
+
+  doc.save(`SKMY_Report_${brand.replace(/\s+/g,'_')}_${new Date().toISOString().slice(0,10)}.pdf`);
+  showToast('✅ PDF downloaded!');
+}
+
+
+// ============ STOCK HISTORY ============
+let stockRecords = [];
+
+async function initStockHistory() {
+  document.getElementById('sh-list').innerHTML = '<div class="empty"><div class="empty-icon">⏳</div><p>Loading...</p></div>';
+  try {
+    stockRecords = await sbGet('stock_counts');
+  } catch(e) { showToast('Failed to load stock records','err'); return; }
+
+  // Populate filters
+  const allBrands = [...new Set(stockRecords.flatMap(r=>(r.entries||[]).map(e=>e.brand)))].sort();
+  const allOutlets = [...new Set(stockRecords.map(r=>r.outlet))].sort();
+  document.getElementById('sh-brand').innerHTML = '<option value="">All Brands</option>' + allBrands.map(b=>`<option>${b}</option>`).join('');
+  document.getElementById('sh-outlet').innerHTML = '<option value="">All Outlets</option>' + allOutlets.map(o=>`<option>${o}</option>`).join('');
+
+  renderStockHistory();
+}
+
+function clearStockFilters() {
+  ['sh-brand','sh-outlet','sh-date-from','sh-date-to'].forEach(id=>document.getElementById(id).value='');
+  renderStockHistory();
+}
+
+function getFilteredStockRecords() {
+  const brand = document.getElementById('sh-brand').value;
+  const outlet = document.getElementById('sh-outlet').value;
+  const from = document.getElementById('sh-date-from').value;
+  const to = document.getElementById('sh-date-to').value;
+  return stockRecords.filter(r=>
+    (!outlet || r.outlet===outlet) &&
+    (!from || r.date>=from) &&
+    (!to || r.date<=to) &&
+    (!brand || (r.entries||[]).some(e=>e.brand===brand))
+  );
+}
+
+function renderStockHistory() {
+  const filtered = getFilteredStockRecords();
+  const brand = document.getElementById('sh-brand').value;
+
+  const totalVisits = filtered.length;
+  const totalItems = filtered.reduce(function(s,r){
+    var entries = brand ? (r.entries||[]).filter(function(e){return e.brand===brand;}) : (r.entries||[]);
+    return s + entries.length;
+  },0);
+  const outletCount = new Set(filtered.map(function(r){return r.outlet;})).size;
+
+  document.getElementById('sh-stats').innerHTML =
+    '<div class="stat-card"><div class="stat-num">'+totalVisits+'</div><div class="stat-label">Stock Counts</div></div>' +
+    '<div class="stat-card"><div class="stat-num">'+outletCount+'</div><div class="stat-label">Outlets</div></div>' +
+    '<div class="stat-card"><div class="stat-num">'+totalItems+'</div><div class="stat-label">SKU Entries</div></div>';
+
+  const list = document.getElementById('sh-list');
+  if (!filtered.length) {
+    list.innerHTML = '<div class="empty"><div class="empty-icon">📦</div><p>No stock records found</p></div>';
+    return;
+  }
+
+  var html = '';
+  filtered.forEach(function(r) {
+    var entries = brand ? (r.entries||[]).filter(function(e){return e.brand===brand;}) : (r.entries||[]);
+    var brandGroups = {};
+    entries.forEach(function(e) {
+      if (!brandGroups[e.brand]) brandGroups[e.brand] = [];
+      brandGroups[e.brand].push(e);
+    });
+
+    var badgesHtml = Object.keys(brandGroups).map(function(b){
+      return '<span class="badge badge-purple">'+b+'</span>';
+    }).join('');
+
+    var groupsHtml = '';
+    Object.entries(brandGroups).forEach(function(entry) {
+      var b = entry[0], items = entry[1];
+      var itemsHtml = items.map(function(e){
+        return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:var(--surface2);border-radius:7px;font-size:12px;margin-bottom:3px">' +
+          '<span style="color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:160px">' + e.desc + '</span>' +
+          '<span style="font-weight:700;color:var(--text);margin-left:8px;flex-shrink:0">' + e.qty + '</span>' +
+          '</div>';
+      }).join('');
+      groupsHtml += '<div style="margin-bottom:10px">' +
+        '<div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px">'+b+'</div>' +
+        itemsHtml + '</div>';
+    });
+
+    html += '<div class="card" style="margin-bottom:10px">' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px">' +
+        '<div>' +
+          '<div style="font-size:14px;font-weight:600">'+r.outlet+'</div>' +
+          '<div style="font-size:12px;color:var(--muted)">📅 '+r.date+(r.merch?' · 👤 '+r.merch:'')+' · '+entries.length+' SKUs</div>' +
+        '</div>' +
+        '<div style="display:flex;gap:6px">'+badgesHtml+'</div>' +
+      '</div>' +
+      groupsHtml +
+      '</div>';
+  });
+  list.innerHTML = html;
+}
+
+async function exportStockExcel() {
+  const filtered = getFilteredStockRecords();
+  const brand = document.getElementById('sh-brand').value;
+  if (!filtered.length) return showToast('No data to export','err');
+
+  showToast('Preparing Excel...');
+
+  // Flatten all entries
+  const rows = [['Date','Outlet','Merchandizer','Brand','SKU','Description','PLU','Qty']];
+  filtered.forEach(r => {
+    const entries = brand ? (r.entries||[]).filter(e=>e.brand===brand) : (r.entries||[]);
+    entries.forEach(e => {
+      rows.push([r.date, r.outlet, r.merch||'', e.brand, e.sku, e.desc, e.plu, e.qty]);
+    });
+  });
+
+  // Build CSV (Excel-compatible with BOM)
+  const csv = rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('
+');
+  const blob = new Blob(['﻿'+csv], {type:'text/csv;charset=utf-8;'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = `SKMY_Stock_${brand||'All'}_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  showToast('✅ Excel exported!');
+}
+
+// Also show stock badge in Records page
+function getStockBadge(outlet, date) {
+  // Check if there's a stock count for this outlet+date
+  const found = stockRecords.find(r=>r.outlet===outlet && r.date===date);
+  return found ? `<span class="badge badge-green" style="font-size:10px">📦 Stock</span>` : '';
 }
 
 // ============ TOAST ============
