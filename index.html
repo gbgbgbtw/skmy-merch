@@ -1927,7 +1927,7 @@ async function renderReport() {
 function exportCSV() {
   const rows=[['Date','Outlet','Brands','Type','Merchandizer','Photo URL','Photo Brands','Remarks']];
   records.forEach(r=>r.photos.forEach(p=>rows.push([r.date,r.outlet,(r.brands||[]).join(';'),r.type,r.merch||'',p.url,(p.brands||[]).join(';'),r.notes||''])));
-  const csv=rows.map(r=>r.map(c=>`"${c}"`).join(',')).join('\n');
+  const csv=rows.map(function(r){return r.map(function(c){return '"'+String(c).replace(/"/g,'""')+'"';}).join(',');}).join('\n');
   const blob=new Blob(['\uFEFF'+csv],{type:'text/csv;charset=utf-8;'});
   const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=`SKMY_${new Date().toISOString().slice(0,10)}.csv`; a.click();
 }
@@ -2190,8 +2190,9 @@ async function submitStock() {
   if (!items.length) { showToast('No quantities entered', 'err'); btn.disabled=false; btn.textContent='✅ Submit Stock Count'; return; }
 
   try {
-    await sbInsert('stock_counts', { outlet, date, merch, entries: items, created_at: new Date().toISOString() });
-    showToast(`✅ Stock count saved! ${items.length} items recorded`);
+    const result = await sbInsert('stock_counts', { outlet, date, merch, entries: items });
+    if (result && result.error) throw new Error(result.error.message || JSON.stringify(result));
+    showToast('✅ Stock count saved! ' + items.length + ' items recorded');
     // Reset
     selectedStockBrands = [];
     stockEntries = {};
@@ -2201,7 +2202,7 @@ async function submitStock() {
     renderStockSKUs();
     document.getElementById('stock-brand-select').innerHTML = Object.keys(PRODUCT_LIST).map(b=>`
       <button class="brand-chip" onclick="toggleStockBrand('${b}')">${b}</button>`).join('');
-  } catch(e) { showToast('Failed to save', 'err'); }
+  } catch(e) { console.error('Stock save error:', e); showToast('Failed to save: ' + (e.message||'unknown error'), 'err'); }
 
   btn.disabled = false; btn.textContent = '✅ Submit Stock Count';
 }
@@ -2504,12 +2505,11 @@ async function exportStockExcel() {
   });
 
   // Build CSV (Excel-compatible with BOM)
-  const csv = rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(',')).join('
-');
+  const csv = rows.map(function(r){return r.map(function(c){return '"'+String(c).replace(/"/g,'""')+'"';}).join(',');}).join('\n');
   const blob = new Blob(['﻿'+csv], {type:'text/csv;charset=utf-8;'});
   const a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = `SKMY_Stock_${brand||'All'}_${new Date().toISOString().slice(0,10)}.csv`;
+  a.download = 'SKMY_Stock_'+(brand||'All')+'_'+new Date().toISOString().slice(0,10)+'.csv';
   a.click();
   showToast('✅ Excel exported!');
 }
