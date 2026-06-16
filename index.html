@@ -402,7 +402,10 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
       <div style="font-weight:700;font-size:15px">SK<span style="color:var(--accent)">MY</span> Merch Photos</div>
       <div id="share-view-sub" style="font-size:12px;color:var(--muted)"></div>
     </div>
-    <button class="btn btn-sm btn-outline" style="margin-left:auto" onclick="downloadAllVisible()">📥 Download All</button>
+    <div style="display:flex;gap:6px;margin-left:auto">
+      <button class="btn btn-sm btn-outline" onclick="downloadAllZip()">📦 ZIP</button>
+      <button class="btn btn-sm btn-outline" onclick="downloadAllPdf()">📄 PDF</button>
+    </div>
   </div>
   <div class="share-filters">
     <select id="sv-brand" onchange="renderShareView()"><option value="">All Brands</option></select>
@@ -2040,15 +2043,123 @@ function renderShareView() {
     </div>`).join('');
 }
 
-async function downloadAllVisible() {
+async function downloadAllZip() {
   const photos = window._visiblePhotos||[];
   if(!photos.length) return showToast('No photos to download','err');
-  showToast('Downloading '+photos.length+' photos...');
-  for(let i=0;i<photos.length;i++) {
-    const p=photos[i];
-    const a=document.createElement('a'); a.href=p.url; a.download=`photo_${i+1}.jpg`; a.target='_blank'; a.click();
-    await new Promise(r=>setTimeout(r,300));
+  showToast('Preparing ZIP... please wait');
+
+  // Load JSZip
+  if (!window.JSZip) {
+    await new Promise((res,rej)=>{
+      const s=document.createElement('script');
+      s.src='https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js';
+      s.onload=res; s.onerror=rej; document.head.appendChild(s);
+    });
   }
+
+  const zip = new JSZip();
+  const folder = zip.folder('SKMY_Photos');
+  let loaded = 0;
+
+  for (let i=0; i<photos.length; i++) {
+    const p = photos[i];
+    try {
+      const res = await fetch(p.url);
+      const blob = await res.blob();
+      const ext = blob.type.includes('png') ? 'png' : 'jpg';
+      const outletShort = (p.outlet||'').replace(/^Watson /i,'').replace(/[^a-zA-Z0-9]/g,'_').substring(0,20);
+      const fname = (i+1)+'_'+outletShort+'_'+p.date+'.'+ext;
+      folder.file(fname, blob);
+      loaded++;
+      showToast('Loading '+loaded+' of '+photos.length+'...');
+    } catch(e) { console.log('Failed to fetch photo:', p.url); }
+  }
+
+  showToast('Creating ZIP...');
+  const content = await zip.generateAsync({type:'blob'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(content);
+  a.download = 'SKMY_Photos_'+new Date().toISOString().slice(0,10)+'.zip';
+  a.click();
+  showToast('✅ ZIP downloaded! '+loaded+' photos');
+}
+
+async function downloadAllPdf() {
+  const photos = window._visiblePhotos||[];
+  if(!photos.length) return showToast('No photos to download','err');
+  showToast('Preparing PDF... please wait');
+
+  // Load jsPDF
+  if (!window.jspdf) {
+    await new Promise((res,rej)=>{
+      const s=document.createElement('script');
+      s.src='https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
+      s.onload=res; s.onerror=rej; document.head.appendChild(s);
+    });
+  }
+
+  const {jsPDF} = window.jspdf;
+  const doc = new jsPDF({orientation:'portrait', unit:'mm', format:'a4'});
+  const pageW = 210, pageH = 297;
+  const margin = 12;
+  const imgW = pageW - margin*2;
+
+  for (let i=0; i<photos.length; i++) {
+    const p = photos[i];
+    if (i>0) doc.addPage();
+
+    // Header bar
+    doc.setFillColor(124,106,247);
+    doc.rect(0,0,pageW,16,'F');
+    doc.setTextColor(255,255,255);
+    doc.setFontSize(9); doc.setFont('helvetica','bold');
+    doc.text('SKMY Merch Photos', margin, 7);
+    doc.setFont('helvetica','normal');
+    doc.text((i+1)+' / '+photos.length, pageW-margin, 7, {align:'right'});
+
+    // Outlet & date info
+    doc.setTextColor(40,40,60);
+    doc.setFontSize(13); doc.setFont('helvetica','bold');
+    doc.text(p.outlet||'', margin, 26);
+    doc.setFontSize(9); doc.setFont('helvetica','normal');
+    doc.setTextColor(100,100,130);
+    doc.text('📅 '+(p.date||'') + '   🏷️ '+(p.photoBrands&&p.photoBrands.length ? p.photoBrands.join(', ') : (p.recordBrands||[]).join(', ')), margin, 33);
+    doc.text('Type: '+(p.type||''), margin, 39);
+
+    // Load image
+    try {
+      const res = await fetch(p.url);
+      const blob = await res.blob();
+      const dataUrl = await new Promise(resolve=>{
+        const reader = new FileReader();
+        reader.onload = e => resolve(e.target.result);
+        reader.readAsDataURL(blob);
+      });
+      const imgType = blob.type.includes('png') ? 'PNG' : 'JPEG';
+      // Image area
+      const imgY = 44;
+      const imgH = pageH - imgY - margin;
+      doc.addImage(dataUrl, imgType, margin, imgY, imgW, imgH, undefined, 'MEDIUM');
+    } catch(e) {
+      doc.setTextColor(200,80,80);
+      doc.text('Failed to load image', margin, 60);
+    }
+
+    showToast('Processing '+(i+1)+' of '+photos.length+'...');
+  }
+
+  // Footer on each page
+  const total = doc.getNumberOfPages();
+  for (let i=1; i<=total; i++) {
+    doc.setPage(i);
+    doc.setFillColor(240,240,250);
+    doc.rect(0,287,pageW,10,'F');
+    doc.setFontSize(7); doc.setTextColor(120,120,150);
+    doc.text('SKMY Merch Tracker · Confidential · Page '+i+' of '+total, pageW/2, 293, {align:'center'});
+  }
+
+  doc.save('SKMY_Photos_'+new Date().toISOString().slice(0,10)+'.pdf');
+  showToast('✅ PDF downloaded! '+photos.length+' photos');
 }
 
 // ============ SETTINGS ============
