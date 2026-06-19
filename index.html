@@ -300,18 +300,8 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
     <button class="btn btn-sm btn-outline" onclick="generatePDF()" style="border-color:var(--danger);color:var(--danger)">📄 Export PDF</button>
     <button class="btn btn-sm btn-success" onclick="openShareModal()">🔗 Share Link</button>
   </div>
-  <div style="margin-bottom:14px">
-    <div style="font-size:11px;font-weight:600;color:var(--accent);text-transform:uppercase;letter-spacing:.06em;margin-bottom:6px">📦 Stock Summary Date Range</div>
-    <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center">
-      <input type="date" id="stock-sum-from" onchange="renderReport()" style="width:auto;flex:1;min-width:130px;font-size:12px;padding:7px 10px">
-      <span style="color:var(--muted);font-size:12px">to</span>
-      <input type="date" id="stock-sum-to" onchange="renderReport()" style="width:auto;flex:1;min-width:130px;font-size:12px;padding:7px 10px">
-      <button class="btn btn-sm btn-outline" onclick="clearStockSumDates()">Clear</button>
-    </div>
-  </div>
   <div id="report-content"></div>
 
-  <div id="stock-summary-section" style="margin-top:20px"></div>
 </div>
 
 <!-- ===== SETTINGS ===== -->
@@ -459,7 +449,29 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
 </div>
 
 <!-- ===== STOCK HISTORY ===== -->
-<div class="page wide" id="page-stock-history" style="display:none">
+<div class="page wide" id="page-stock-history">
+  <div class="page-title">Stock Report</div>
+  <div class="page-sub">Filter and compare stock levels across outlets</div>
+
+  <div class="filter-bar">
+    <select id="sh-brand" onchange="renderStockHistory()"><option value="">All Brands</option></select>
+    <select id="sh-outlet" onchange="renderStockHistory()"><option value="">All Outlets</option></select>
+    <input type="date" id="sh-date-from" onchange="renderStockHistory()">
+    <input type="date" id="sh-date-to" onchange="renderStockHistory()">
+    <button class="btn btn-sm btn-outline" onclick="clearStockFilters()">Clear</button>
+    <button class="btn btn-sm btn-success" onclick="exportStockExcel()">📊 Export Excel</button>
+  </div>
+
+  <div id="sh-stats" class="stats-row" style="grid-template-columns:repeat(3,1fr)"></div>
+
+  <!-- Stock Summary Table -->
+  <div id="sh-summary"></div>
+
+  <!-- Raw Records -->
+  <div style="margin-top:20px">
+    <div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Individual Records</div>
+    <div id="sh-list"></div>
+  </div>
 </div>
 
 <!-- ===== STOCK HISTORY ===== -->
@@ -1601,45 +1613,23 @@ function handleFiles(files) {
 function renderPhotoTagger() {
   const container = document.getElementById('photo-tagger');
   if (!pendingPhotos.length) { container.innerHTML=''; return; }
-  container.innerHTML = pendingPhotos.map((p,i)=>{
-    const allDP = DPROJECT_BRANDS.every(b=>p.brands.includes(b));
-    const brandChips = brands.map(b=>{
-      const bn = typeof b==='object'?b.name:b;
-      return '<button class="photo-brand-chip '+(p.brands.includes(bn)?'selected':'')+'" onclick="togglePhotoBrand('+i+',\''+bn+'\')" style="user-select:none;-webkit-user-select:none">'+bn+'</button>';
-    }).join('');
-    return '<div class="photo-tag-row">'+
-      '<img class="photo-tag-thumb" src="'+p.dataUrl+'" onclick="openLightbox(\''+p.dataUrl+'\',\'\')">'+
-      '<div class="photo-tag-info">'+
-        '<div class="photo-tag-name">'+p.name+'</div>'+
-        '<div class="photo-tag-brands">'+
-          '<button class="photo-brand-chip" style="border-color:var(--accent2);color:var(--accent2);font-weight:600;user-select:none;-webkit-user-select:none" onclick="toggleDProject('+i+')">'+(allDP?'✓ ':'⚡ ')+'dProject</button>'+
-          brandChips+
-        '</div>'+
-      '</div>'+
-      '<button class="photo-remove" onclick="removePhoto('+i+')">✕</button>'+
-    '</div>';
-  }).join('');
+  container.innerHTML = pendingPhotos.map((p,i)=>`
+    <div class="photo-tag-row">
+      <img class="photo-tag-thumb" src="${p.dataUrl}" onclick="openLightbox('${p.dataUrl}','')">
+      <div class="photo-tag-info">
+        <div class="photo-tag-name">${p.name}</div>
+        <div class="photo-tag-brands">
+          ${brands.map(b=>`<button class="photo-brand-chip ${p.brands.includes(b)?'selected':''}" onclick="togglePhotoBrand(${i},'${b}')">${b}</button>`).join('')}
+        </div>
+      </div>
+      <button class="photo-remove" onclick="removePhoto(${i})">✕</button>
+    </div>`).join('');
 }
-
-const DPROJECT_BRANDS = ['Dr.CPU','DERMABLOCK','SON&PARK ARTI','A.SOLUTION','Two Edit','Point','milktouch','DROP BE'];
 
 function togglePhotoBrand(photoIdx, brand) {
   const p = pendingPhotos[photoIdx];
   const i = p.brands.indexOf(brand);
   if (i===-1) p.brands.push(brand); else p.brands.splice(i,1);
-  renderPhotoTagger();
-}
-
-function toggleDProject(photoIdx) {
-  const p = pendingPhotos[photoIdx];
-  const allSelected = DPROJECT_BRANDS.every(b => p.brands.includes(b));
-  if (allSelected) {
-    // Deselect all dProject brands
-    p.brands = p.brands.filter(b => !DPROJECT_BRANDS.includes(b));
-  } else {
-    // Select all dProject brands
-    DPROJECT_BRANDS.forEach(b => { if (!p.brands.includes(b)) p.brands.push(b); });
-  }
   renderPhotoTagger();
 }
 
@@ -1927,11 +1917,7 @@ async function renderReport() {
     const filterBrandVal = document.getElementById('report-brand').value;
     if (stockData && stockData.length) {
       let sf = stockData;
-      const stockFrom = document.getElementById('stock-sum-from') ? document.getElementById('stock-sum-from').value : '';
-      const stockTo = document.getElementById('stock-sum-to') ? document.getElementById('stock-sum-to').value : '';
-      if (stockFrom) sf = sf.filter(r=>r.date>=stockFrom);
-      if (stockTo) sf = sf.filter(r=>r.date<=stockTo);
-      if (!stockFrom && !stockTo && days!=='all') { const c=new Date(); c.setDate(c.getDate()-parseInt(days)); sf=sf.filter(r=>new Date(r.date)>=c); }
+      if (days!=='all') { const c=new Date(); c.setDate(c.getDate()-parseInt(days)); sf=stockData.filter(r=>new Date(r.date)>=c); }
       const skuMap = {};
       sf.forEach(r=>{
         (r.entries||[]).forEach(e=>{
@@ -2499,15 +2485,16 @@ let stockRecords = [];
 
 async function initStockHistory() {
   document.getElementById('sh-list').innerHTML = '<div class="empty"><div class="empty-icon">⏳</div><p>Loading...</p></div>';
+  document.getElementById('sh-summary').innerHTML = '';
   try {
     stockRecords = await sbGet('stock_counts');
-  } catch(e) { showToast('Failed to load stock records','err'); return; }
+  } catch(e) { showToast('Failed to load','err'); return; }
 
   // Populate filters
   const allBrands = [...new Set(stockRecords.flatMap(r=>(r.entries||[]).map(e=>e.brand)))].sort();
   const allOutlets = [...new Set(stockRecords.map(r=>r.outlet))].sort();
-  document.getElementById('sh-brand').innerHTML = '<option value="">All Brands</option>' + allBrands.map(b=>`<option>${b}</option>`).join('');
-  document.getElementById('sh-outlet').innerHTML = '<option value="">All Outlets</option>' + allOutlets.map(o=>`<option>${o}</option>`).join('');
+  document.getElementById('sh-brand').innerHTML = '<option value="">All Brands</option>' + allBrands.map(b=>'<option>'+b+'</option>').join('');
+  document.getElementById('sh-outlet').innerHTML = '<option value="">All Outlets</option>' + allOutlets.map(o=>'<option>'+o+'</option>').join('');
 
   renderStockHistory();
 }
@@ -2534,6 +2521,7 @@ function renderStockHistory() {
   const filtered = getFilteredStockRecords();
   const brand = document.getElementById('sh-brand').value;
 
+  // Stats
   const totalVisits = filtered.length;
   const totalItems = filtered.reduce(function(s,r){
     var entries = brand ? (r.entries||[]).filter(function(e){return e.brand===brand;}) : (r.entries||[]);
@@ -2546,13 +2534,64 @@ function renderStockHistory() {
     '<div class="stat-card"><div class="stat-num">'+outletCount+'</div><div class="stat-label">Outlets</div></div>' +
     '<div class="stat-card"><div class="stat-num">'+totalItems+'</div><div class="stat-label">SKU Entries</div></div>';
 
-  const list = document.getElementById('sh-list');
-  if (!filtered.length) {
-    list.innerHTML = '<div class="empty"><div class="empty-icon">📦</div><p>No stock records found</p></div>';
-    return;
+  // ---- STOCK SUMMARY TABLE ----
+  var skuMap = {};
+  filtered.forEach(function(r) {
+    (r.entries||[]).forEach(function(e) {
+      if (brand && e.brand!==brand) return;
+      if (!skuMap[e.brand]) skuMap[e.brand] = {};
+      if (!skuMap[e.brand][e.sku]) skuMap[e.brand][e.sku] = {desc:e.desc, plu:e.plu, outlets:{}};
+      var ex = skuMap[e.brand][e.sku].outlets[r.outlet];
+      if (!ex || r.date > ex.date) {
+        skuMap[e.brand][e.sku].outlets[r.outlet] = {qty:e.qty, date:r.date};
+      }
+    });
+  });
+
+  var allOutlets = [...new Set(filtered.map(function(r){return r.outlet;}))].sort();
+  var brandKeys = Object.keys(skuMap).sort();
+  var summaryEl = document.getElementById('sh-summary');
+
+  if (brandKeys.length && allOutlets.length) {
+    var summaryHtml = '<div style="font-size:13px;font-weight:700;margin-bottom:10px;color:var(--text)">📊 Stock Summary (Latest per Outlet)</div>';
+    brandKeys.forEach(function(br) {
+      var skus = Object.entries(skuMap[br]);
+      var headerCells = '<th style="padding:6px 10px;text-align:left;color:var(--muted);font-weight:600;font-size:11px;min-width:180px;background:var(--surface2)">Description</th>';
+      allOutlets.forEach(function(o) {
+        var shortName = o.replace(/^Watson /i,'').replace(/^Guardian /i,'');
+        headerCells += '<th style="padding:6px 8px;text-align:center;color:var(--muted);font-weight:600;font-size:10px;white-space:nowrap;background:var(--surface2);min-width:70px">'+shortName+'</th>';
+      });
+      var bodyRows = '';
+      skus.forEach(function(skuEntry) {
+        var sku = skuEntry[0], data = skuEntry[1];
+        var cells = '<td style="padding:6px 10px;color:var(--text);font-size:11px;border-bottom:1px solid var(--border)">'+data.desc+'<div style="font-size:9px;color:var(--muted)">'+sku+'</div></td>';
+        allOutlets.forEach(function(o) {
+          var en = data.outlets[o];
+          if (!en) {
+            cells += '<td style="padding:6px 8px;text-align:center;color:var(--border);border-bottom:1px solid var(--border);font-size:12px">—</td>';
+          } else {
+            cells += '<td style="padding:6px 8px;text-align:center;font-weight:700;color:var(--text);border-bottom:1px solid var(--border);font-size:13px">'+en.qty+'</td>';
+          }
+        });
+        bodyRows += '<tr>'+cells+'</tr>';
+      });
+      summaryHtml += '<div class="card" style="margin-bottom:12px;padding:14px">'+
+        '<div style="font-size:13px;font-weight:700;color:var(--accent);margin-bottom:8px">'+br+'</div>'+
+        '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">'+
+        '<tr>'+headerCells+'</tr>'+
+        bodyRows+
+        '</table></div></div>';
+    });
+    summaryEl.innerHTML = summaryHtml;
+  } else {
+    summaryEl.innerHTML = filtered.length ? '' : '<div class="empty"><div class="empty-icon">📦</div><p>No stock data found for selected filters</p></div>';
   }
 
-  var html = '';
+  // ---- INDIVIDUAL RECORDS ----
+  var list = document.getElementById('sh-list');
+  if (!filtered.length) { list.innerHTML = ''; return; }
+
+  var html2 = '';
   filtered.forEach(function(r) {
     var entries = brand ? (r.entries||[]).filter(function(e){return e.brand===brand;}) : (r.entries||[]);
     var brandGroups = {};
@@ -2560,66 +2599,33 @@ function renderStockHistory() {
       if (!brandGroups[e.brand]) brandGroups[e.brand] = [];
       brandGroups[e.brand].push(e);
     });
-
     var badgesHtml = Object.keys(brandGroups).map(function(b){
       return '<span class="badge badge-purple">'+b+'</span>';
     }).join('');
-
     var groupsHtml = '';
     Object.entries(brandGroups).forEach(function(entry) {
       var b = entry[0], items = entry[1];
       var itemsHtml = items.map(function(e){
-        return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:var(--surface2);border-radius:7px;font-size:12px;margin-bottom:3px">' +
-          '<span style="color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:160px">' + e.desc + '</span>' +
-          '<span style="font-weight:700;color:var(--text);margin-left:8px;flex-shrink:0">' + e.qty + '</span>' +
+        return '<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 9px;background:var(--surface2);border-radius:7px;font-size:12px;margin-bottom:3px">'+
+          '<span style="color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px">'+e.desc+'</span>'+
+          '<span style="font-weight:700;color:var(--text);margin-left:8px;flex-shrink:0">'+e.qty+'</span>'+
           '</div>';
       }).join('');
-      groupsHtml += '<div style="margin-bottom:10px">' +
-        '<div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px">'+b+'</div>' +
-        itemsHtml + '</div>';
+      groupsHtml += '<div style="margin-bottom:8px">'+
+        '<div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">'+b+'</div>'+
+        itemsHtml+'</div>';
     });
-
-    html += '<div class="card" style="margin-bottom:10px">' +
-      '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px">' +
-        '<div>' +
-          '<div style="font-size:14px;font-weight:600">'+r.outlet+'</div>' +
-          '<div style="font-size:12px;color:var(--muted)">📅 '+r.date+(r.merch?' · 👤 '+r.merch:'')+' · '+entries.length+' SKUs</div>' +
-        '</div>' +
-        '<div style="display:flex;gap:6px">'+badgesHtml+'</div>' +
-      '</div>' +
-      groupsHtml +
-      '</div>';
+    html2 += '<div class="card" style="margin-bottom:8px">'+
+      '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px">'+
+        '<div><div style="font-size:14px;font-weight:600">'+r.outlet+'</div>'+
+        '<div style="font-size:12px;color:var(--muted)">📅 '+r.date+(r.merch?' · 👤 '+r.merch:'')+' · '+entries.length+' SKUs</div></div>'+
+        '<div style="display:flex;gap:5px;flex-wrap:wrap">'+badgesHtml+'</div>'+
+      '</div>'+
+      groupsHtml+'</div>';
   });
-  list.innerHTML = html;
+  list.innerHTML = html2;
 }
 
-async function exportStockExcel() {
-  const filtered = getFilteredStockRecords();
-  const brand = document.getElementById('sh-brand').value;
-  if (!filtered.length) return showToast('No data to export','err');
-
-  showToast('Preparing Excel...');
-
-  // Flatten all entries
-  const rows = [['Date','Outlet','Merchandizer','Brand','SKU','Description','PLU','Qty']];
-  filtered.forEach(r => {
-    const entries = brand ? (r.entries||[]).filter(e=>e.brand===brand) : (r.entries||[]);
-    entries.forEach(e => {
-      rows.push([r.date, r.outlet, r.merch||'', e.brand, e.sku, e.desc, e.plu, e.qty]);
-    });
-  });
-
-  // Build CSV (Excel-compatible with BOM)
-  const csv = rows.map(function(r){return r.map(function(c){return '"'+String(c).replace(/"/g,'""')+'"';}).join(',');}).join('\n');
-  const blob = new Blob(['﻿'+csv], {type:'text/csv;charset=utf-8;'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'SKMY_Stock_'+(brand||'All')+'_'+new Date().toISOString().slice(0,10)+'.csv';
-  a.click();
-  showToast('✅ Excel exported!');
-}
-
-// Also show stock badge in Records page
 function getStockBadge(outlet, date) {
   // Check if there's a stock count for this outlet+date
   const found = stockRecords.find(r=>r.outlet===outlet && r.date===date);
@@ -2651,12 +2657,6 @@ async function loadSettings() {
 async function reloadSettings() {
   await loadSettings();
   buildOutletIndex();
-}
-
-function clearStockSumDates() {
-  document.getElementById('stock-sum-from').value = '';
-  document.getElementById('stock-sum-to').value = '';
-  renderReport();
 }
 
 // ============ TOAST ============
