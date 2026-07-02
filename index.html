@@ -302,6 +302,7 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
   </div>
   <div id="report-content"></div>
 
+  <div id="stock-summary-section" style="margin-top:20px"></div>
 </div>
 
 <!-- ===== SETTINGS ===== -->
@@ -454,39 +455,13 @@ select:focus,input:focus,textarea:focus{border-color:var(--accent);}
 <!-- ===== STOCK HISTORY ===== -->
 <div class="page wide" id="page-stock-history">
   <div class="page-title">Stock Report</div>
-  <div class="page-sub">Filter and compare stock levels across outlets</div>
+  <div class="page-sub">Browse and export stock count records</div>
 
   <div class="filter-bar">
     <select id="sh-brand" onchange="renderStockHistory()"><option value="">All Brands</option></select>
     <select id="sh-outlet" onchange="renderStockHistory()"><option value="">All Outlets</option></select>
     <input type="date" id="sh-date-from" onchange="renderStockHistory()">
     <input type="date" id="sh-date-to" onchange="renderStockHistory()">
-    <button class="btn btn-sm btn-outline" onclick="clearStockFilters()">Clear</button>
-    <button class="btn btn-sm btn-success" onclick="exportStockExcel()">📊 Export Excel</button>
-  </div>
-
-  <div id="sh-stats" class="stats-row" style="grid-template-columns:repeat(3,1fr)"></div>
-
-  <!-- Stock Summary Table -->
-  <div id="sh-summary"></div>
-
-  <!-- Raw Records -->
-  <div style="margin-top:20px">
-    <div style="font-size:12px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px">Individual Records</div>
-    <div id="sh-list"></div>
-  </div>
-</div>
-
-<!-- ===== STOCK HISTORY ===== -->
-<div class="page wide" id="page-stock-history">
-  <div class="page-title">Stock History</div>
-  <div class="page-sub">Browse and export stock count records</div>
-
-  <div class="filter-bar">
-    <select id="sh-brand" onchange="renderStockHistory()"><option value="">All Brands</option></select>
-    <select id="sh-outlet" onchange="renderStockHistory()"><option value="">All Outlets</option></select>
-    <input type="date" id="sh-date-from" onchange="renderStockHistory()" placeholder="From">
-    <input type="date" id="sh-date-to" onchange="renderStockHistory()" placeholder="To">
     <button class="btn btn-sm btn-outline" onclick="clearStockFilters()">Clear</button>
     <button class="btn btn-sm btn-success" onclick="exportStockExcel()">📊 Export Excel</button>
   </div>
@@ -1542,12 +1517,18 @@ function filterOutlets(q) {
   if (!filtered.length) { dd.innerHTML='<div style="padding:10px;color:var(--muted);font-size:13px">No outlets found</div>'; dd.style.display='block'; return; }
   const groups={};
   filtered.forEach(o=>{if(!groups[o.chain])groups[o.chain]=[];groups[o.chain].push(o.name);});
-  dd.innerHTML = Object.entries(groups).sort().map(([chain,names])=>`
-    <div style="padding:6px 12px 2px;font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--accent);text-transform:uppercase;background:var(--surface2)">${chain}</div>
-    ${names.map(n=>`<div class="outlet-opt" onclick="selectOutlet('${n.replace(/'/g,"\'")}')" style="padding:9px 14px;font-size:13px;cursor:pointer;border-bottom:1px solid var(--border)">${n}</div>`).join('')}
-  `).join('');
+  var parts = [];
+  Object.entries(groups).sort().forEach(function(entry){
+    var chain = entry[0], names = entry[1];
+    parts.push('<div style="padding:6px 12px 2px;font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--accent);text-transform:uppercase;background:var(--surface2)">'+chain+'</div>');
+    names.forEach(function(n){
+      parts.push('<div class="outlet-opt" style="padding:9px 14px;font-size:13px;cursor:pointer;border-bottom:1px solid var(--border)">'+n+'</div>');
+    });
+  });
+  dd.innerHTML = parts.join('');
   dd.style.display='block';
   dd.querySelectorAll('.outlet-opt').forEach(el=>{
+    el.addEventListener('click',function(){ selectOutlet(el.textContent); });
     el.addEventListener('mouseover',()=>el.style.background='var(--surface2)');
     el.addEventListener('mouseout',()=>el.style.background='');
   });
@@ -1914,54 +1895,6 @@ async function renderReport() {
       <div style="margin-top:4px;font-size:11px;color:var(--muted)">${Object.entries(d.types).map(([t,n])=>`${t}: ${n}`).join(' · ')}</div>
     </div>`).join('')}</div>`;
 
-  // Stock summary
-  try {
-    const stockData = await sbGet('stock_counts');
-    const filterBrandVal = document.getElementById('report-brand').value;
-    if (stockData && stockData.length) {
-      let sf = stockData;
-      if (days!=='all') { const c=new Date(); c.setDate(c.getDate()-parseInt(days)); sf=stockData.filter(r=>new Date(r.date)>=c); }
-      const skuMap = {};
-      sf.forEach(r=>{
-        (r.entries||[]).forEach(e=>{
-          if (filterBrandVal && e.brand!==filterBrandVal) return;
-          if (!skuMap[e.brand]) skuMap[e.brand]={};
-          if (!skuMap[e.brand][e.sku]) skuMap[e.brand][e.sku]={desc:e.desc,plu:e.plu,outlets:{}};
-          const ex=skuMap[e.brand][e.sku].outlets[r.outlet];
-          if (!ex||r.date>ex.date) skuMap[e.brand][e.sku].outlets[r.outlet]={qty:e.qty,date:r.date};
-        });
-      });
-      const allOutlets=[...new Set(sf.map(r=>r.outlet))].sort();
-      const brandKeys=Object.keys(skuMap).sort();
-      if (brandKeys.length) {
-        var summaryHtml = '<div style="font-size:14px;font-weight:700;margin-bottom:10px">📦 Stock Summary (Latest)</div>';
-        brandKeys.forEach(function(br) {
-          var skus = Object.entries(skuMap[br]);
-          var headerCells = '<th style="padding:5px 8px;text-align:left;color:var(--muted);font-weight:600;min-width:160px">Description</th>';
-          allOutlets.forEach(function(o) {
-            headerCells += '<th style="padding:5px 8px;text-align:center;color:var(--muted);font-weight:600;white-space:nowrap;font-size:10px">'+o.replace(/^Watson /i,'')+'</th>';
-          });
-          var bodyRows = '';
-          skus.forEach(function(skuEntry) {
-            var sku = skuEntry[0], data = skuEntry[1];
-            var cells = '<td style="padding:5px 8px;color:var(--text);font-size:11px">'+data.desc+'</td>';
-            allOutlets.forEach(function(o) {
-              var en = data.outlets[o];
-              if (!en) { cells += '<td style="padding:5px 8px;text-align:center;color:var(--border)">—</td>'; }
-              else { cells += '<td style="padding:5px 8px;text-align:center;font-weight:700;color:var(--text)">'+en.qty+'</td>'; }
-            });
-            bodyRows += '<tr style="border-bottom:1px solid var(--border)">'+cells+'</tr>';
-          });
-          summaryHtml += '<div class="brand-row" style="margin-bottom:8px">' +
-            '<div class="brand-name" style="margin-bottom:8px">'+br+'</div>' +
-            '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:11px">' +
-            '<tr style="background:var(--surface2)">'+headerCells+'</tr>' +
-            bodyRows + '</table></div></div>';
-        });
-        document.getElementById('stock-summary-section').innerHTML = summaryHtml;
-      } else document.getElementById('stock-summary-section').innerHTML='';
-    } else document.getElementById('stock-summary-section').innerHTML='';
-  } catch(e) { console.log('stock err',e); }
 }
 
 function exportCSV() {
@@ -2105,7 +2038,7 @@ async function downloadAllZip() {
       folder.file(fname, blob);
       loaded++;
       showToast('Loading '+loaded+' of '+photos.length+'...');
-    } catch(e) { console.log('Failed to fetch photo:', p.url); }
+    } catch(e) { console.log('Failed:', p.url); }
   }
   showToast('Creating ZIP...');
   const content = await zip.generateAsync({type:'blob'});
@@ -2411,12 +2344,18 @@ function filterStockOutlets(q) {
   if (!filtered.length) { dd.innerHTML='<div style="padding:10px;color:var(--muted);font-size:13px">No outlets found</div>'; dd.style.display='block'; return; }
   const groups={};
   filtered.forEach(o=>{if(!groups[o.chain])groups[o.chain]=[];groups[o.chain].push(o.name);});
-  dd.innerHTML = Object.entries(groups).sort().map(([chain,names])=>`
-    <div style="padding:6px 12px 2px;font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--accent);text-transform:uppercase;background:var(--surface2)">${chain}</div>
-    ${names.map(n=>`<div class="outlet-opt" onclick="selectStockOutlet('${n.replace(/'/g,"\'")}','${chain.replace(/'/g,"\'")}')" style="padding:9px 14px;font-size:13px;cursor:pointer;border-bottom:1px solid var(--border)">${n}</div>`).join('')}
-  `).join('');
+  var parts = [];
+  Object.entries(groups).sort().forEach(function(entry){
+    var chain = entry[0], names = entry[1];
+    parts.push('<div style="padding:6px 12px 2px;font-size:10px;font-weight:700;letter-spacing:.06em;color:var(--accent);text-transform:uppercase;background:var(--surface2)">'+chain+'</div>');
+    names.forEach(function(n){
+      parts.push('<div class="outlet-opt" style="padding:9px 14px;font-size:13px;cursor:pointer;border-bottom:1px solid var(--border)">'+n+'</div>');
+    });
+  });
+  dd.innerHTML = parts.join('');
   dd.style.display='block';
   dd.querySelectorAll('.outlet-opt').forEach(el=>{
+    el.addEventListener('click',function(){ selectStockOutlet(el.textContent); });
     el.addEventListener('mouseover',()=>el.style.background='var(--surface2)');
     el.addEventListener('mouseout',()=>el.style.background='');
   });
@@ -2576,16 +2515,15 @@ let stockRecords = [];
 
 async function initStockHistory() {
   document.getElementById('sh-list').innerHTML = '<div class="empty"><div class="empty-icon">⏳</div><p>Loading...</p></div>';
-  document.getElementById('sh-summary').innerHTML = '';
   try {
     stockRecords = await sbGet('stock_counts');
-  } catch(e) { showToast('Failed to load','err'); return; }
+  } catch(e) { showToast('Failed to load stock records','err'); return; }
 
   // Populate filters
   const allBrands = [...new Set(stockRecords.flatMap(r=>(r.entries||[]).map(e=>e.brand)))].sort();
   const allOutlets = [...new Set(stockRecords.map(r=>r.outlet))].sort();
-  document.getElementById('sh-brand').innerHTML = '<option value="">All Brands</option>' + allBrands.map(b=>'<option>'+b+'</option>').join('');
-  document.getElementById('sh-outlet').innerHTML = '<option value="">All Outlets</option>' + allOutlets.map(o=>'<option>'+o+'</option>').join('');
+  document.getElementById('sh-brand').innerHTML = '<option value="">All Brands</option>' + allBrands.map(b=>`<option>${b}</option>`).join('');
+  document.getElementById('sh-outlet').innerHTML = '<option value="">All Outlets</option>' + allOutlets.map(o=>`<option>${o}</option>`).join('');
 
   renderStockHistory();
 }
@@ -2612,7 +2550,6 @@ function renderStockHistory() {
   const filtered = getFilteredStockRecords();
   const brand = document.getElementById('sh-brand').value;
 
-  // Stats
   const totalVisits = filtered.length;
   const totalItems = filtered.reduce(function(s,r){
     var entries = brand ? (r.entries||[]).filter(function(e){return e.brand===brand;}) : (r.entries||[]);
@@ -2625,64 +2562,13 @@ function renderStockHistory() {
     '<div class="stat-card"><div class="stat-num">'+outletCount+'</div><div class="stat-label">Outlets</div></div>' +
     '<div class="stat-card"><div class="stat-num">'+totalItems+'</div><div class="stat-label">SKU Entries</div></div>';
 
-  // ---- STOCK SUMMARY TABLE ----
-  var skuMap = {};
-  filtered.forEach(function(r) {
-    (r.entries||[]).forEach(function(e) {
-      if (brand && e.brand!==brand) return;
-      if (!skuMap[e.brand]) skuMap[e.brand] = {};
-      if (!skuMap[e.brand][e.sku]) skuMap[e.brand][e.sku] = {desc:e.desc, plu:e.plu, outlets:{}};
-      var ex = skuMap[e.brand][e.sku].outlets[r.outlet];
-      if (!ex || r.date > ex.date) {
-        skuMap[e.brand][e.sku].outlets[r.outlet] = {qty:e.qty, date:r.date};
-      }
-    });
-  });
-
-  var allOutlets = [...new Set(filtered.map(function(r){return r.outlet;}))].sort();
-  var brandKeys = Object.keys(skuMap).sort();
-  var summaryEl = document.getElementById('sh-summary');
-
-  if (brandKeys.length && allOutlets.length) {
-    var summaryHtml = '<div style="font-size:13px;font-weight:700;margin-bottom:10px;color:var(--text)">📊 Stock Summary (Latest per Outlet)</div>';
-    brandKeys.forEach(function(br) {
-      var skus = Object.entries(skuMap[br]);
-      var headerCells = '<th style="padding:6px 10px;text-align:left;color:var(--muted);font-weight:600;font-size:11px;min-width:180px;background:var(--surface2)">Description</th>';
-      allOutlets.forEach(function(o) {
-        var shortName = o.replace(/^Watson /i,'').replace(/^Guardian /i,'');
-        headerCells += '<th style="padding:6px 8px;text-align:center;color:var(--muted);font-weight:600;font-size:10px;white-space:nowrap;background:var(--surface2);min-width:70px">'+shortName+'</th>';
-      });
-      var bodyRows = '';
-      skus.forEach(function(skuEntry) {
-        var sku = skuEntry[0], data = skuEntry[1];
-        var cells = '<td style="padding:6px 10px;color:var(--text);font-size:11px;border-bottom:1px solid var(--border)">'+data.desc+'<div style="font-size:9px;color:var(--muted)">'+sku+'</div></td>';
-        allOutlets.forEach(function(o) {
-          var en = data.outlets[o];
-          if (!en) {
-            cells += '<td style="padding:6px 8px;text-align:center;color:var(--border);border-bottom:1px solid var(--border);font-size:12px">—</td>';
-          } else {
-            cells += '<td style="padding:6px 8px;text-align:center;font-weight:700;color:var(--text);border-bottom:1px solid var(--border);font-size:13px">'+en.qty+'</td>';
-          }
-        });
-        bodyRows += '<tr>'+cells+'</tr>';
-      });
-      summaryHtml += '<div class="card" style="margin-bottom:12px;padding:14px">'+
-        '<div style="font-size:13px;font-weight:700;color:var(--accent);margin-bottom:8px">'+br+'</div>'+
-        '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse">'+
-        '<tr>'+headerCells+'</tr>'+
-        bodyRows+
-        '</table></div></div>';
-    });
-    summaryEl.innerHTML = summaryHtml;
-  } else {
-    summaryEl.innerHTML = filtered.length ? '' : '<div class="empty"><div class="empty-icon">📦</div><p>No stock data found for selected filters</p></div>';
+  const list = document.getElementById('sh-list');
+  if (!filtered.length) {
+    list.innerHTML = '<div class="empty"><div class="empty-icon">📦</div><p>No stock records found</p></div>';
+    return;
   }
 
-  // ---- INDIVIDUAL RECORDS ----
-  var list = document.getElementById('sh-list');
-  if (!filtered.length) { list.innerHTML = ''; return; }
-
-  var html2 = '';
+  var html = '';
   filtered.forEach(function(r) {
     var entries = brand ? (r.entries||[]).filter(function(e){return e.brand===brand;}) : (r.entries||[]);
     var brandGroups = {};
@@ -2690,33 +2576,66 @@ function renderStockHistory() {
       if (!brandGroups[e.brand]) brandGroups[e.brand] = [];
       brandGroups[e.brand].push(e);
     });
+
     var badgesHtml = Object.keys(brandGroups).map(function(b){
       return '<span class="badge badge-purple">'+b+'</span>';
     }).join('');
+
     var groupsHtml = '';
     Object.entries(brandGroups).forEach(function(entry) {
       var b = entry[0], items = entry[1];
       var itemsHtml = items.map(function(e){
-        return '<div style="display:flex;justify-content:space-between;align-items:center;padding:5px 9px;background:var(--surface2);border-radius:7px;font-size:12px;margin-bottom:3px">'+
-          '<span style="color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:200px">'+e.desc+'</span>'+
-          '<span style="font-weight:700;color:var(--text);margin-left:8px;flex-shrink:0">'+e.qty+'</span>'+
+        return '<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 10px;background:var(--surface2);border-radius:7px;font-size:12px;margin-bottom:3px">' +
+          '<span style="color:var(--muted);overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:160px">' + e.desc + '</span>' +
+          '<span style="font-weight:700;color:var(--text);margin-left:8px;flex-shrink:0">' + e.qty + '</span>' +
           '</div>';
       }).join('');
-      groupsHtml += '<div style="margin-bottom:8px">'+
-        '<div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.06em;margin-bottom:4px">'+b+'</div>'+
-        itemsHtml+'</div>';
+      groupsHtml += '<div style="margin-bottom:10px">' +
+        '<div style="font-size:11px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.06em;margin-bottom:5px">'+b+'</div>' +
+        itemsHtml + '</div>';
     });
-    html2 += '<div class="card" style="margin-bottom:8px">'+
-      '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:8px">'+
-        '<div><div style="font-size:14px;font-weight:600">'+r.outlet+'</div>'+
-        '<div style="font-size:12px;color:var(--muted)">📅 '+r.date+(r.merch?' · 👤 '+r.merch:'')+' · '+entries.length+' SKUs</div></div>'+
-        '<div style="display:flex;gap:5px;flex-wrap:wrap">'+badgesHtml+'</div>'+
-      '</div>'+
-      groupsHtml+'</div>';
+
+    html += '<div class="card" style="margin-bottom:10px">' +
+      '<div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:8px;margin-bottom:10px">' +
+        '<div>' +
+          '<div style="font-size:14px;font-weight:600">'+r.outlet+'</div>' +
+          '<div style="font-size:12px;color:var(--muted)">📅 '+r.date+(r.merch?' · 👤 '+r.merch:'')+' · '+entries.length+' SKUs</div>' +
+        '</div>' +
+        '<div style="display:flex;gap:6px">'+badgesHtml+'</div>' +
+      '</div>' +
+      groupsHtml +
+      '</div>';
   });
-  list.innerHTML = html2;
+  list.innerHTML = html;
 }
 
+async function exportStockExcel() {
+  const filtered = getFilteredStockRecords();
+  const brand = document.getElementById('sh-brand').value;
+  if (!filtered.length) return showToast('No data to export','err');
+
+  showToast('Preparing Excel...');
+
+  // Flatten all entries
+  const rows = [['Date','Outlet','Merchandizer','Brand','SKU','Description','PLU','Qty']];
+  filtered.forEach(r => {
+    const entries = brand ? (r.entries||[]).filter(e=>e.brand===brand) : (r.entries||[]);
+    entries.forEach(e => {
+      rows.push([r.date, r.outlet, r.merch||'', e.brand, e.sku, e.desc, e.plu, e.qty]);
+    });
+  });
+
+  // Build CSV (Excel-compatible with BOM)
+  const csv = rows.map(function(r){return r.map(function(c){return '"'+String(c).replace(/"/g,'""')+'"';}).join(',');}).join('\n');
+  const blob = new Blob(['﻿'+csv], {type:'text/csv;charset=utf-8;'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'SKMY_Stock_'+(brand||'All')+'_'+new Date().toISOString().slice(0,10)+'.csv';
+  a.click();
+  showToast('✅ Excel exported!');
+}
+
+// Also show stock badge in Records page
 function getStockBadge(outlet, date) {
   // Check if there's a stock count for this outlet+date
   const found = stockRecords.find(r=>r.outlet===outlet && r.date===date);
@@ -2748,27 +2667,6 @@ async function loadSettings() {
 async function reloadSettings() {
   await loadSettings();
   buildOutletIndex();
-}
-
-async function exportStockExcel() {
-  const filtered = getFilteredStockRecords();
-  const brand = document.getElementById('sh-brand').value;
-  if (!filtered.length) return showToast('No data to export','err');
-  showToast('Preparing Excel...');
-  const rows = [['Date','Outlet','Merchandizer','Brand','SKU','Description','PLU','Qty']];
-  filtered.forEach(function(r) {
-    var entries = brand ? (r.entries||[]).filter(function(e){return e.brand===brand;}) : (r.entries||[]);
-    entries.forEach(function(e) {
-      rows.push([r.date, r.outlet, r.merch||'', e.brand, e.sku, e.desc, e.plu, e.qty]);
-    });
-  });
-  const csv = rows.map(function(r){return r.map(function(c){return '"'+String(c).replace(/"/g,'""')+'"';}).join(',');}).join('\n');
-  const blob = new Blob(['\uFEFF'+csv], {type:'text/csv;charset=utf-8;'});
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(blob);
-  a.download = 'SKMY_Stock_'+(brand||'All')+'_'+new Date().toISOString().slice(0,10)+'.csv';
-  a.click();
-  showToast('✅ Excel exported!');
 }
 
 // ============ TOAST ============
